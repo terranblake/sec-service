@@ -8,13 +8,20 @@ const gaapIdentifierSchema = new Schema({
         enum: require('../utils/common-enums').taxonomyExtensionTypes,
         required: true,
     },
-    extensionLinkRole: {
+    extendedLinkRole: {
         type: String,
         required: true,
     },
     definition: {
-        type: String,
-        required: true,
+        id: {
+            type: String,
+            default: null,
+        },
+        flag: {
+            type: String,
+            enum: require('../utils/common-enums').identifierDocumentFlags,
+        },
+        context: String,
     },
     prefix: {
         type: String,
@@ -34,7 +41,7 @@ const gaapIdentifierSchema = new Schema({
     },
     order: {
         type: Number,
-        required: true,
+        required: false,
     },
     weight: {
         type: Number,
@@ -43,7 +50,7 @@ const gaapIdentifierSchema = new Schema({
     parent: {
         type: Schema.Types.ObjectId,
         ref: 'GAAPIdentifier',
-        required: true,
+        required: false,
     },
     children: {
         type: [Schema.Types.ObjectId],
@@ -58,34 +65,35 @@ gaapIdentifierSchema.index({
 });
 
 gaapIdentifierSchema.index({
+    parent: 1,
+    depth: 1,
+});
+
+gaapIdentifierSchema.index({
+    parent: 1,
+    depth: 1,
     children: 1
 });
 
 gaapIdentifierSchema.index({
-    parent: 1,
-});
-
-gaapIdentifierSchema.index({
     depth: 1,
-    parent: 1,
-});
-
-gaapIdentifierSchema.index({
-    depth: 1,
-    order: 1,
-    parent: 1,
+    name: 1,
+    'description.id': 1,
 });
 
 const gaapIdentifierModel = model('GAAPIdentifier', gaapIdentifierSchema)
+
+const createAll = async (items) => {
+    return require('../utils/raw-data-helpers').createByDepth(items, gaapIdentifierModel.create);
+}
 
 const create = async (newItem) => {
     return await new gaapIdentifierModel(newItem)
         .save()
         .then((createdItem) => {
-            logs({ _id: createdItem._id })
             return createdItem;
         })
-        .catch(errors);
+        .catch(errorHandler);
 }
 
 const findAll = async () => {
@@ -94,7 +102,7 @@ const findAll = async () => {
         .then((res) => {
             return res;
         })
-        .catch(errors);
+        .catch(errorHandler);
 };
 
 const deleteAll = async () => {
@@ -103,7 +111,7 @@ const deleteAll = async () => {
         .then((res) => {
             return res;
         })
-        .catch(errors);
+        .catch(errorHandler);
 };
 
 const findById = async (_id) => {
@@ -112,24 +120,52 @@ const findById = async (_id) => {
         .then((res) => {
             return res;
         })
-        .catch(errors);
+        .catch(errorHandler);
 }
 
-const findAllChildren = async (_id) => {
+const findByDepth = async (depth) => {
     return await gaapIdentifierModel
-        .find({ _id })
+        .find({ depth })
         .then((res) => {
             return res;
         })
-        .catch(errors);
+        .catch(errorHandler);
+}
+
+const findParentIdentifier = async (identifier) => {
+    const { depth, parent, definition } = identifier;
+    return await gaapIdentifierModel
+        .findOne({ depth: depth - 1, name: parent, 'definition.id': definition.id }, { _id: 1 })
+        .then((identifier) => {
+            if (identifier) {
+                logs('[server] fetched matching identifier', `${identifier}`);
+                return identifier;
+            }
+        })
+        .catch(errorHandler);
+}
+
+function errorHandler(err) {
+    switch (err.name) {
+        case 'TypeError':
+        case 'MongoError':
+        case 'ValidationError':
+            errors('[server] GaapIdentifier'.error, err.name, err.message);
+            break;
+        default:
+            errors({ MongoError: err });
+    }
 }
 
 module.exports = {
     model: gaapIdentifierModel,
     methods: {
+        createAll,
         findAll,
         deleteAll,
         create,
-        findById
+        findById,
+        findByDepth,
+        findParentIdentifier,
     }
 };

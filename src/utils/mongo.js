@@ -13,8 +13,8 @@ class Database {
     __connect() {
         mongoose
             .connect(`mongodb://${server}/${database}`)
-            .then(() => logs('[server] mongodb connection established'))
-            .catch((err) => errors(err));
+            .then(() => logs('[server] mongodb connection established'.debug))
+            .catch((err) => errors(err.error));
     }
 }
 
