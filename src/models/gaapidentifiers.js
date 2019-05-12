@@ -1,6 +1,5 @@
 const { model, Schema } = require('mongoose');
 const logs = console.log.bind(console);
-const errors = console.error.bind(console);
 const { errorHandler } = require('../utils/error-helper');
 
 const gaapIdentifierSchema = new Schema({

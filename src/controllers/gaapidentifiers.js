@@ -3,9 +3,6 @@ const { gaapIdentifiers } = require('../models');
 
 const { each } = require('lodash');
 
-const logs = console.log.bind(console);
-const errors = console.log.bind(console);
-
 module.exports.seedTree = async (path, extensionType) => {
     let result = {};
 

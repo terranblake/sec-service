@@ -120,8 +120,6 @@ module.exports.processRawRssItem = async (rawRssItem) => {
         // format raw filing data and append
         //  taxonomy extensions to object
         let filing = formatRawFiling(rawRssItem, extensions, foundCompany._id);
-        logs({ before: filing });
-
         filing = await filings.create(filing);
         logs({ filing })
         return filing._id;

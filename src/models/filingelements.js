@@ -1,6 +1,4 @@
 const { model, Schema } = require('mongoose');
-const logs = console.log.bind(console);
-const errors = console.error.bind(console);
 const { errorHandler } = require('../utils/error-helper');
 
 const filingElementSchema = new Schema({
@@ -25,7 +23,8 @@ const filingElementSchema = new Schema({
     content: String,
 });
 
-module.exports.model = model('FilingElement', filingElementSchema)
+const filingElementModel = model('FilingElement', filingElementSchema);
+module.exports.model = filingElementModel;
 
 module.exports.create = async (newItem) => {
     return await new model(newItem)

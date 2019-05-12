@@ -49,7 +49,7 @@ const filingSchema = new Schema({
 });
 
 const filingModel = model('Filing', filingSchema);
-module.exports.filing = filingModel;
+module.exports.model = filingModel;
 
 module.exports.create = async (newItem) => {
   return await new filingModel(newItem)

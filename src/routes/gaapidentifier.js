@@ -1,12 +1,7 @@
 const { gaapIdentifier } = require('../models');
 const { seedTree } = require('../controllers/gaapidentifiers');
 
-const { each } = require('lodash');
-
-const logs = console.log.bind({ console });
-const errors = console.error.bind({ console });
-const ObjectId = i => i;
-
+const logs = console.log.bind(console);
 var express = require('express')
 var router = express.Router({ mergeParams: true });
 
