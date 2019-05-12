@@ -1,4 +1,4 @@
-const { company: { methods } } = require('../models');
+const { companies } = require('../models');
 const { loadCompaniesFromJson } = require('../utils/raw-data-helpers');
 
 const { each } = require('lodash');
@@ -11,25 +11,17 @@ var express = require('express')
 var router = express.Router({ mergeParams: true });
 
 router
-    .get('/:cik', async(req, res) => {
-        const { cik } = req.params;
-        const company = await methods.findByCik(cik);
-
-        res.status(200).send({ company });
-    })
     .post('/', async (req, res) => {
         const { path } = req.body;
         logs({ message: 'loading companies from json' });
-        await loadCompaniesFromJson(path, (companies) => {
-            each(companies, (company) => {
-                methods.create(company);
+        await loadCompaniesFromJson(path, (newCompanies) => {
+            each(newCompanies, (companyObj) => {
+                companies.create(companyObj);
             });
 
-            const message = `loaded ${Object.keys(companies).length} companies from json`;
-            logs({ message });
+            const message = `loaded ${Object.keys(newCompanies).length} companies from json`;
+            res.status(200).send({ message });
         });
-
-        res.status(200).send('OK');
     })
 
 module.exports = router;

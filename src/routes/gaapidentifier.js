@@ -1,5 +1,5 @@
-const { gaapIdentifier: { methods } } = require('../models');
-const { seedTree } = require('../controllers/gaap-identifier');
+const { gaapIdentifier } = require('../models');
+const { seedTree } = require('../controllers/gaapidentifiers');
 
 const { each } = require('lodash');
 
@@ -13,7 +13,7 @@ var router = express.Router({ mergeParams: true });
 router
     // Use this route for querying the tree, once built
     .get('/pick', async (req, res) => {
-        const identifier = await methods.findByDepth(0);
+        const identifier = await gaapIdentifier.findByDepth(0);
         if (Array.isArray(identifier) && identifier.length) {
             res.status(200).send(identifier[0]);
         }

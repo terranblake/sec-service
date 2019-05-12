@@ -1,18 +1,19 @@
 const moment = require('moment');
-const { map, each } = require('lodash');
+const { map, reduce } = require('lodash');
 
-const { gaapIdentifier } = require('../models');
+const { gaapIdentifiers, companies, filings, taxonomyExtensions } = require('../models');
 
 const logs = console.log.bind(console);
 const errors = console.log.bind(console);
+const { taxonomyExtensionTypes } = require('../utils/common-enums');
 
-const formatRawFiling = (filingObj) => {
+const formatRawFiling = (filingObj, taxonomyExtensions, company) => {
     return {
         source: 'sec',
         sourceLink: filingObj.link,
         publishTitle: filingObj.title,
         publishedAt: moment(filingObj.pubDate, 'dddd, DD'),
-        formType: filingObj.filing['edgar:formType'][0],
+        filingType: filingObj.filing['edgar:formType'][0],
         filingDate: moment(filingObj.filing['edgar:filingDate'], 'MM/DD/YYYY'),
         accessionNumber: filingObj.filing['edgar:accessionNumber'][0],
         fileNumber: filingObj.filing['edgar:fileNumber'][0],
@@ -22,6 +23,8 @@ const formatRawFiling = (filingObj) => {
             filingObj.filing['edgar:assistantDirector'] && filingObj.filing['edgar:assistantDirector'][0] || null,
         assignedSic: filingObj.filing['edgar:assignedSic'] && filingObj.filing['edgar:assignedSic'][0] || null,
         fiscalYearEnd: filingObj.filing['edgar:fiscalYearEnd'] && moment(filingObj.filing['edgar:fiscalYearEnd'], 'MMDD') || null,
+        taxonomyExtensions,
+        company
     };
 }
 
@@ -36,7 +39,12 @@ const extractDefitionObjectFromString = (definition) => {
 
 const extractNameFromParent = (parent, prefix, hasColon) => parent.split(hasColon ? ':' : prefix).pop();
 
-const formatRawGaapIdentifiers = (identifiers, extensionType) => {
+const extractExtensionTypeFromDescription = description =>
+    taxonomyExtensionTypes.find(type =>
+        new RegExp(type).test(description.toLowerCase())
+    );
+
+module.exports.formatRawGaapIdentifiers = (identifiers, extensionType) => {
     identifiers = map(identifiers, (identifier) => {
         // process all missing or relational data
         identifier = {
@@ -58,42 +66,81 @@ const formatRawGaapIdentifiers = (identifiers, extensionType) => {
     return identifiers;
 }
 
-const formatRawExtensions = (extensionObjs) => {
-    return map(extensionObjs, extensionObj => {
-        extension = extensionObj['$']
+const aggregateTaxonomyExtensions = async (company, extensionObjs) => {
+    let createdExtensions = [];
+    createdExtensions = await reduce(extensionObjs, async (filteredP, extension) => {
+        const filtered = await filteredP;
+        const description = extension['$']['edgar:description'];
+        const extensionType = extractExtensionTypeFromDescription(description);
 
-        return {
-            sequence: extension['edgar:sequence'],
-            file: extension['edgar:file'],
-            fileType: extension['edgar:type'],
-            size: extension['edgar:size'],
-            description: extension['edgar:description'],
-            url: extension['edgar:url'],
+        if (extensionType) {
+            extension = {
+                company: company && company._id || null,
+                description,
+                extensionType,
+                sequence: extension['$']['edgar:sequence'],
+                fileName: extension['$']['edgar:file'],
+                fileType: extension['$']['edgar:type'],
+                fileSize: extension['$']['edgar:size'],
+                url: extension['$']['edgar:url'],
+                elementStatus: 'unprocessed',
+            };
+
+            logs({ extension });
+
+            const { _id } = await taxonomyExtensions.create(extension);
+            filtered.push(_id);
         }
-    });
+        return filtered;
+    }, []);
+
+    return createdExtensions;
 }
 
-const parseRssItem = (filing) => {
-    const cik = Number(filing.filing['edgar:cikNumber']);
-    console.log({ cik });
+module.exports.processRawRssItem = async (rawRssItem) => {
+    const cik = Number(rawRssItem.filing['edgar:cikNumber']);
+    const accessionNumber = rawRssItem.filing['edgar:accessionNumber'][0];
 
-    // Format raw extension files
-    extensions = formatRawExtensions(filing.filing['edgar:xbrlFiles'][0][['edgar:xbrlFile']]);
-    console.log({ extensions });
+    const foundCompany = await companies.findByCik(cik);
+    if (foundCompany) {
+        const foundFiling = await filings.get({
+            company: foundCompany && foundCompany._id || null,
+            accessionNumber
+        });
 
-    // format raw filing data
-    formattedFiling = formatRawFiling(filing)
+        if (Array.isArray(foundFiling) && foundFiling.length) {
+            logs(`[server] already processed filing for company ${foundCompany.name} cik ${cik} accessionNumber ${accessionNumber}`);
+            return null;
+        }
+
+        // Format raw extension files
+        let extensions = rawRssItem.filing['edgar:xbrlFiles'][0][['edgar:xbrlFile']];
+        extensions = await aggregateTaxonomyExtensions(foundCompany, extensions);
+
+        // format raw filing data and append
+        //  taxonomy extensions to object
+        let filing = formatRawFiling(rawRssItem, extensions, foundCompany._id);
+        logs({ before: filing });
+
+        filing = await filings.create(filing);
+        logs({ filing })
+        return filing._id;
+    } else {
+        errors(`[server] company with CIK ${cik} could not be found.`);
+    }
+
+    return false;
 }
 
-const loadCompaniesFromJson = async (path, next) => {
+module.exports.loadCompaniesFromJson = async (path, next) => {
     require('fs').readFile(path, (err, res) => next(JSON.parse(res)));
 }
 
-const loadGaapIdentifiersFromJson = async (path, sheet, next) => {
+module.exports.loadGaapIdentifiersFromJson = async (path, sheet, next) => {
     return require('./xlsx').parse(path, sheet, next);
 }
 
-const createByDepth = async (tree) => {
+module.exports.createByDepth = async (tree) => {
     logs('[server] started creating tree'.debug);
     const sortedTree = sortTree(tree);
     logs('[server] finished sorting tree'.debug);
@@ -109,13 +156,13 @@ const createByDepth = async (tree) => {
         if (leaf.depth != 0) {
             leaf.definition = extractDefitionObjectFromString(leaf.definition);
             leaf.parent = extractNameFromParent(leaf.parent, leaf.prefix, true);
-            leaf.parent = await gaapIdentifier.methods.findParentIdentifier(leaf);
+            leaf.parent = await gaapIdentifiers.findParentIdentifier(leaf);
         } else {
             await logs('[server] is top-level element', `${leaf.name}`.help);
         }
 
         // await logs(`[server] depth ${leaf.depth} name ${leaf.name}`);
-        await gaapIdentifier.methods.create(leaf);
+        await gaapIdentifiers.create(leaf);
     };
 }
 
@@ -130,11 +177,3 @@ const sortTree = (tree) => {
         return 0;
     });
 }
-
-module.exports = {
-    parseRssItem,
-    loadCompaniesFromJson,
-    loadGaapIdentifiersFromJson,
-    formatRawGaapIdentifiers,
-    createByDepth,
-};

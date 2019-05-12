@@ -1,4 +1,5 @@
 module.exports = {
-    filing: require('./filing'),
-    company: require('./company'),
+    filings: require('./filings'),
+    companies: require('./companies'),
+    gaapIdentifiers: require('./gaapidentifiers'),
 }

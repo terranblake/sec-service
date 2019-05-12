@@ -1,7 +1,7 @@
 const logs = console.log.bind(console);
 const errors = console.log.bind(console);
 const { map } = require('lodash');
-const { parseRssItem } = require('../utils/raw-data-helpers');
+const { processRawRssItem } = require('../utils/raw-data-helpers');
 
 const fetchLinks = {
     'sec': 'https://www.sec.gov/Archives/edgar/xbrlrss.all.xml',
@@ -15,10 +15,11 @@ let parser = new Parser({
     }
 });
 
-const fetchLatest = async () => {
-    let feed = await parser.parseURL(fetchLinks['sec']);
-    const filings = map(feed.items, parseRssItem);
+module.exports.fetchLatest = async (fetchSource) => {
+    let feed = await parser.parseURL(fetchLinks[fetchSource]);
+    const filings = await map(feed.items, async (item) => {
+        item = await processRawRssItem(item);
+        return item;
+    });
     return filings;
 };
-
-module.exports = { fetchLatest };

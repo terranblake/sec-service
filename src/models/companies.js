@@ -1,6 +1,6 @@
 const { model, Schema } = require('mongoose');
-const logs = console.log.bind(console);
 const errors = console.error.bind(console);
+const { errorHandler } = require('../utils/error-helper');
 
 const companySchema = new Schema({
     name: {
@@ -28,9 +28,10 @@ const companySchema = new Schema({
     address: String,
 });
 
-const companyModel = model('Company', companySchema)
+const companyModel = model('Company', companySchema);
+module.exports.model = companyModel;
 
-const create = async (newItem) => {
+module.exports.create = async (newItem) => {
     return await new companyModel(newItem)
         .save()
         .then((createdItem) => {
@@ -39,16 +40,7 @@ const create = async (newItem) => {
         .catch(errorHandler);
 }
 
-const findAll = async () => {
-    return await companyModel
-        .find()
-        .then((res) => {
-            return res;
-        })
-        .catch(errorHandler);
-};
-
-const deleteAll = async () => {
+module.exports.deleteAll = async () => {
     return await companyModel
         .deleteMany()
         .then((result) => {
@@ -57,7 +49,7 @@ const deleteAll = async () => {
         .catch(errorHandler);
 };
 
-const findById = async (_id) => {
+module.exports.findById = async (_id) => {
     return await companyModel
         .findOne({ _id })
         .then((res) => {
@@ -66,31 +58,11 @@ const findById = async (_id) => {
         .catch(errorHandler);
 }
 
-const findByCik = async (cik) => {
+module.exports.findByCik = async (cik) => {
     return await companyModel
-        .findOne({ cik })
+        .findOne({ cik: { $regex: new RegExp(cik) } })
         .then((company) => {
             return company;
         })
         .catch(errorHandler);
 }
-
-function errorHandler(err) {
-    switch (err.code) {
-        case 11000: // duplicate key error
-            break;
-        default:
-            errors({ MongoError: err });
-    }
-}
-
-module.exports = {
-    model: companyModel,
-    methods: {
-        findByCik,
-        findAll,
-        deleteAll,
-        create,
-        findById
-    }
-};

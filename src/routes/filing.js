@@ -1,4 +1,6 @@
-const { filing: { methods } } = require('../models/index.js');
+const { filing } = require('../models/index.js');
+const { fetchLatest } = require('../controllers/filings');
+
 const logs = console.log.bind({ console });
 const errors = console.error.bind({ console });
 
@@ -7,44 +9,15 @@ const noneFound = { message: 'No filing could be found!' };
 var express = require('express')
 var router = express.Router({ mergeParams: true });
 
-router.route('/')
-    .post(async (req, res) => {
-        const newItem = await methods.create(req.body);
+router
+    .post('/populate', async (req, res) => {
+        const { fetchSource } = req.body;
+        if (!fetchSource) {
+            return res.status(401).send({ err: 'No fetchSource provided.' });
+        }
 
-        res.status(200).send({
-            message: 'New filing created',
-            _id: newItem._id,
-        });
-    });
-
-router.route('/latest')
-    .get(async (req, res) => {
-        const result = await methods.findMostRecentlyPublished();
-        logs({ result });
-
-        res.status(200).send(result || noneFound);
-    });
-
-router.route('/all')
-    .get(async (req, res) => {
-        const result = await methods.findAll();
-        logs({ result });
-
-        res.status(200).send(result || noneFound);
-    })
-    .delete(async (req, res) => {
-        const result = await methods.deleteAll();
-        logs({ result });
-
-        res.status(200).send(result || noneFound);
-    });
-
-router.route('/:id')
-    .get(async (req, res) => {
-        const result = await methods.findById(req.params.id);
-        logs({ result });
-
-        res.status(200).send(result || noneFound);
+        const result = await fetchLatest(fetchSource);
+        return res.status(200).send(result || noneFound);
     });
 
 module.exports = router;

@@ -1,6 +1,7 @@
 const { model, Schema } = require('mongoose');
 const logs = console.log.bind(console);
 const errors = console.error.bind(console);
+const { errorHandler } = require('../utils/error-helper');
 
 const gaapIdentifierSchema = new Schema({
     extensionType: {
@@ -81,13 +82,18 @@ gaapIdentifierSchema.index({
     'description.id': 1,
 });
 
-const gaapIdentifierModel = model('GAAPIdentifier', gaapIdentifierSchema)
+const gaapIdentifierModel = model('GAAPIdentifier', gaapIdentifierSchema);
+module.exports.model = gaapIdentifierModel;
 
-const createAll = async (items) => {
-    return require('../utils/raw-data-helpers').createByDepth(items, gaapIdentifierModel.create);
+module.exports.createAll = async (items) => {
+    return require('../utils/raw-data-helpers')
+        .createByDepth(
+            items, 
+            this.create
+        );
 }
 
-const create = async (newItem) => {
+module.exports.create = async (newItem) => {
     return await new gaapIdentifierModel(newItem)
         .save()
         .then((createdItem) => {
@@ -96,34 +102,7 @@ const create = async (newItem) => {
         .catch(errorHandler);
 }
 
-const findAll = async () => {
-    return await gaapIdentifierModel
-        .find()
-        .then((res) => {
-            return res;
-        })
-        .catch(errorHandler);
-};
-
-const deleteAll = async () => {
-    return await gaapIdentifierModel
-        .deleteMany()
-        .then((res) => {
-            return res;
-        })
-        .catch(errorHandler);
-};
-
-const findById = async (_id) => {
-    return await gaapIdentifierModel
-        .find({ _id })
-        .then((res) => {
-            return res;
-        })
-        .catch(errorHandler);
-}
-
-const findByDepth = async (depth) => {
+module.exports.findByDepth = async (depth) => {
     return await gaapIdentifierModel
         .find({ depth })
         .then((res) => {
@@ -132,7 +111,7 @@ const findByDepth = async (depth) => {
         .catch(errorHandler);
 }
 
-const findParentIdentifier = async (identifier) => {
+module.exports.findParentIdentifier = async (identifier) => {
     const { depth, parent, definition } = identifier;
     return await gaapIdentifierModel
         .findOne({ depth: depth - 1, name: parent, 'definition.id': definition.id }, { _id: 1 })
@@ -144,28 +123,3 @@ const findParentIdentifier = async (identifier) => {
         })
         .catch(errorHandler);
 }
-
-function errorHandler(err) {
-    switch (err.name) {
-        case 'TypeError':
-        case 'MongoError':
-        case 'ValidationError':
-            errors('[server] GaapIdentifier'.error, err.name, err.message);
-            break;
-        default:
-            errors({ MongoError: err });
-    }
-}
-
-module.exports = {
-    model: gaapIdentifierModel,
-    methods: {
-        createAll,
-        findAll,
-        deleteAll,
-        create,
-        findById,
-        findByDepth,
-        findParentIdentifier,
-    }
-};
