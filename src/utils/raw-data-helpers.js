@@ -2,10 +2,8 @@ const moment = require('moment');
 const { map, reduce } = require('lodash');
 
 const { gaapIdentifiers, companies, filings, taxonomyExtensions } = require('../models');
-
-const logs = console.log.bind(console);
-const errors = console.log.bind(console);
 const { taxonomyExtensionTypes } = require('../utils/common-enums');
+const { logs, errors } = require('../utils/logging');
 
 const formatRawFiling = (filingObj, taxonomyExtensions, company) => {
     return {
@@ -86,14 +84,13 @@ const aggregateTaxonomyExtensions = async (company, extensionObjs) => {
                 elementStatus: 'unprocessed',
             };
 
-            logs({ extension });
-
             const { _id } = await taxonomyExtensions.create(extension);
             filtered.push(_id);
         }
         return filtered;
     }, []);
 
+    logs(`aggregated ${createdExtensions.length} extensions for company ${foundCompany.name} cik ${foundCompany.cik}`);
     return createdExtensions;
 }
 
@@ -109,7 +106,7 @@ module.exports.processRawRssItem = async (rawRssItem) => {
         });
 
         if (Array.isArray(foundFiling) && foundFiling.length) {
-            logs(`[server] already processed filing for company ${foundCompany.name} cik ${cik} accessionNumber ${accessionNumber}`);
+            logs(`duplicate filing company ${foundCompany.name} cik ${cik} accessionNumber ${accessionNumber}`);
             return null;
         }
 
@@ -121,10 +118,9 @@ module.exports.processRawRssItem = async (rawRssItem) => {
         //  taxonomy extensions to object
         let filing = formatRawFiling(rawRssItem, extensions, foundCompany._id);
         filing = await filings.create(filing);
-        logs({ filing })
         return filing._id;
     } else {
-        errors(`[server] company with CIK ${cik} could not be found.`);
+        errors(`company could not be found cik ${cik}`);
     }
 
     return false;
@@ -139,15 +135,15 @@ module.exports.loadGaapIdentifiersFromJson = async (path, sheet, next) => {
 }
 
 module.exports.createByDepth = async (tree) => {
-    logs('[server] started creating tree'.debug);
     const sortedTree = sortTree(tree);
-    logs('[server] finished sorting tree'.debug);
+    logs('finished sorting tree');
+
     let depthC = 0;
     for (let leaf in sortedTree) {
         leaf = sortedTree[leaf];
 
         if (leaf.depth > depthC) {
-            logs(`[server] creating depth ${depthC} leaves`.debug);
+            logs(`creating depth ${depthC} leaves`);
             depthC++;
         }
 
@@ -155,17 +151,17 @@ module.exports.createByDepth = async (tree) => {
             leaf.definition = extractDefitionObjectFromString(leaf.definition);
             leaf.parent = extractNameFromParent(leaf.parent, leaf.prefix, true);
             leaf.parent = await gaapIdentifiers.findParentIdentifier(leaf);
+            leaf.parent && logs(`found parent identifier ${identifier} depth ${leaf.depth - 1} parent ${leaf.parent}`);
         } else {
-            await logs('[server] is top-level element', `${leaf.name}`.help);
+            logs(`top-level element ${leaf.name} depth ${leaf.depth - 1}`);
         }
-
-        // await logs(`[server] depth ${leaf.depth} name ${leaf.name}`);
+        
         await gaapIdentifiers.create(leaf);
     };
 }
 
 const sortTree = (tree) => {
-    // logs('[server] started sorting tree');
+    logs('started sorting tree');
     return tree.sort(function (a, b) {
         const depthA = a.depth, depthB = b.depth;
         if (depthA < depthB)

@@ -1,6 +1,5 @@
 const { model, Schema } = require('mongoose');
-const errors = console.error.bind(console);
-const { errorHandler } = require('../utils/error-helper');
+const { errors } = require('../utils/logging');
 
 const taxonomyExtensionSchema = new Schema({
   company: {
@@ -54,7 +53,7 @@ module.exports.create = async (item) => {
     .then((res) => {
       return res;
     })
-    .catch(errorHandler);
+    .catch(errors);
 }
 
 module.exports.deleteAll = async () => {
@@ -63,5 +62,5 @@ module.exports.deleteAll = async () => {
     .then((res) => {
       return res;
     })
-    .catch(errorHandler);
+    .catch(errors);
 };

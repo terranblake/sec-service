@@ -1,20 +1,6 @@
 const bodyParser = require('body-parser');
 const express = require('express');
-const logs = console.log.bind(console);
-const colors = require('colors');
-
-colors.setTheme({
-    silly: 'rainbow',
-    input: 'grey',
-    verbose: 'cyan',
-    prompt: 'grey',
-    info: 'green',
-    data: 'grey',
-    help: 'cyan',
-    warn: 'yellow',
-    debug: 'blue',
-    error: 'red'
-  });
+const { logs } = require('./src/utils/logging');
 
 require('./src/utils/mongo');
 const app = express();
@@ -26,10 +12,10 @@ const PORT = process.env.PORT || 3000;
 
 app
     .use('/', async (req, res, next) => {
-        logs(`[server] ${req.method} ${req.originalUrl}`.info);
+        logs(`${req.method} ${req.originalUrl}`);
         next();
     })
     .use('/api', require('./src/utils/route').init())
     .use('/api', require('./src/routes'));
 
-app.listen(PORT, logs(`[server] listening on ${PORT}`.debug));
+app.listen(PORT, logs(`listening on ${PORT}`));

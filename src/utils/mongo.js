@@ -1,21 +1,41 @@
 let mongoose = require('mongoose');
-const logs = console.log.bind(console);
-const errors = console.log.bind(console);
+const config = require('config');
 
-const server = '127.0.0.1:27017';
-const database = 'fundamentals';
+const { logs, errors } = require('./logging');
+const { loaded } = require('./index');
+
+const connection = () => {
+    if (loaded('config')) {
+        if (!config.has('mongodb.connection')) {
+            return false;
+        }
+
+        const connection = config.get('mongodb.connection');
+        logs(connection);
+
+        // return `mongodb://${server}/${database}`
+        return false;
+    }
+
+    return false;
+}
 
 class Database {
-    constructor() {
-        this.__connect();
+    constructor(connection) {
+        if (connection) {
+            this.__connection = connection;
+            this.__connect();
+        } else {
+            errors('mongodb connection error');
+        }
     }
 
     __connect() {
         mongoose
-            .connect(`mongodb://${server}/${database}`)
-            .then(() => logs('[server] mongodb connection established'.debug))
-            .catch((err) => errors(err.error));
+            .connect(this.__connection)
+            .then(() => logs('mongodb connection established'))
+            .catch((err) => errors(err));
     }
 }
 
-module.exports = new Database();
+module.exports = new Database(connection());

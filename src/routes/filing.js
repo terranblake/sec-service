@@ -1,9 +1,5 @@
 const { filing } = require('../models/index.js');
 const { fetchLatest } = require('../controllers/filings');
-
-const logs = console.log.bind({ console });
-const errors = console.error.bind({ console });
-
 const noneFound = { message: 'No filing could be found!' };
 
 var express = require('express')

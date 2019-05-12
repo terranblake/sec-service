@@ -1,6 +1,5 @@
 const { model, Schema } = require('mongoose');
-const errors = console.error.bind(console);
-const { errorHandler } = require('../utils/error-helper');
+const { errors } = require('../utils/logging');
 
 const companySchema = new Schema({
     name: {
@@ -37,7 +36,7 @@ module.exports.create = async (newItem) => {
         .then((createdItem) => {
             return createdItem;
         })
-        .catch(errorHandler);
+        .catch(errors);
 }
 
 module.exports.deleteAll = async () => {
@@ -46,7 +45,7 @@ module.exports.deleteAll = async () => {
         .then((result) => {
             return result;
         })
-        .catch(errorHandler);
+        .catch(errors);
 };
 
 module.exports.findById = async (_id) => {
@@ -55,7 +54,7 @@ module.exports.findById = async (_id) => {
         .then((res) => {
             return res;
         })
-        .catch(errorHandler);
+        .catch(errors);
 }
 
 module.exports.findByCik = async (cik) => {
@@ -64,5 +63,5 @@ module.exports.findByCik = async (cik) => {
         .then((company) => {
             return company;
         })
-        .catch(errorHandler);
+        .catch(errors);
 }

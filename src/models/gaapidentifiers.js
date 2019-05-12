@@ -1,6 +1,5 @@
 const { model, Schema } = require('mongoose');
-const logs = console.log.bind(console);
-const { errorHandler } = require('../utils/error-helper');
+const { errors } = require('../utils/logging');
 
 const gaapIdentifierSchema = new Schema({
     extensionType: {
@@ -98,7 +97,7 @@ module.exports.create = async (newItem) => {
         .then((createdItem) => {
             return createdItem;
         })
-        .catch(errorHandler);
+        .catch(errors);
 }
 
 module.exports.findByDepth = async (depth) => {
@@ -107,7 +106,7 @@ module.exports.findByDepth = async (depth) => {
         .then((res) => {
             return res;
         })
-        .catch(errorHandler);
+        .catch(errors);
 }
 
 module.exports.findParentIdentifier = async (identifier) => {
@@ -116,9 +115,8 @@ module.exports.findParentIdentifier = async (identifier) => {
         .findOne({ depth: depth - 1, name: parent, 'definition.id': definition.id }, { _id: 1 })
         .then((identifier) => {
             if (identifier) {
-                logs('[server] fetched matching identifier', `${identifier}`);
                 return identifier;
             }
         })
-        .catch(errorHandler);
+        .catch(errors);
 }

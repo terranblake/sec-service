@@ -1,5 +1,5 @@
 const { model, Schema } = require('mongoose');
-const { errorHandler } = require('../utils/error-helper');
+const { errors } = require('../utils/logging');
 
 const filingElementSchema = new Schema({
     filing: {
@@ -32,7 +32,7 @@ module.exports.create = async (newItem) => {
         .then((item) => {
             return item;
         })
-        .catch(errorHandler);
+        .catch(errors);
 }
 
 module.exports.deleteAll = async () => {
@@ -41,5 +41,5 @@ module.exports.deleteAll = async () => {
         .then((res) => {
             return res;
         })
-        .catch(errorHandler);
+        .catch(errors);
 };

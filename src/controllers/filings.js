@@ -1,5 +1,3 @@
-const logs = console.log.bind(console);
-const errors = console.log.bind(console);
 const { map } = require('lodash');
 const { processRawRssItem } = require('../utils/raw-data-helpers');
 

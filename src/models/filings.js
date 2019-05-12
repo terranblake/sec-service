@@ -1,9 +1,5 @@
 const { model, Schema } = require('mongoose');
-
-const logs = console.log.bind(console);
-const errors = console.error.bind(console);
-const { each } = require('lodash');
-const { errorHandler } = require('../utils/error-helper');
+const { errors } = require('../utils/logging');
 
 const filingSchema = new Schema({
   source: {
@@ -57,7 +53,7 @@ module.exports.create = async (newItem) => {
     .then((result) => {
       return result;
     })
-    .catch(errorHandler);
+    .catch(errors);
 }
 
 module.exports.get = async (query, projection, paging) => {
@@ -66,7 +62,7 @@ module.exports.get = async (query, projection, paging) => {
     .then((result) => {
       return result;
     })
-    .catch(errorHandler);
+    .catch(errors);
 }
 
 module.exports.delete = async (query) => {
@@ -75,7 +71,7 @@ module.exports.delete = async (query) => {
     .then((result) => {
       return result;
     })
-    .catch(errorHandler);
+    .catch(errors);
 }
 
 module.exports.deleteOne = async (query) => {
@@ -84,7 +80,7 @@ module.exports.deleteOne = async (query) => {
     .then((result) => {
       return result;
     })
-    .catch(errorHandler);
+    .catch(errors);
 }
 
 module.exports.findOne = async (query, projection, paging) => {
@@ -93,5 +89,5 @@ module.exports.findOne = async (query, projection, paging) => {
     .then((result) => {
       return result;
     })
-    .catch(errorHandler);
+    .catch(errors);
 }
