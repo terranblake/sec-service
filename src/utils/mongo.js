@@ -11,10 +11,8 @@ const connection = () => {
         }
 
         const connection = config.get('mongodb.connection');
-        logs(connection);
-
-        // return `mongodb://${server}/${database}`
-        return false;
+        const { address, port, database } = connection;
+        return `mongodb://${address}:${port}/${database}`
     }
 
     return false;
@@ -32,8 +30,8 @@ class Database {
 
     __connect() {
         mongoose
-            .connect(this.__connection)
-            .then(() => logs('mongodb connection established'))
+            .connect(this.__connection, { useNewUrlParser: true })
+            .then(() => logs(`mongodb connection established ${this.__connection}`))
             .catch((err) => errors(err));
     }
 }

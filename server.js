@@ -2,7 +2,12 @@ const bodyParser = require('body-parser');
 const express = require('express');
 const { logs } = require('./src/utils/logging');
 
-require('./src/utils/mongo');
+require('./src/utils/gcp/kms').decrypt(
+    './config/default.json',
+    './config/client.json',
+    require('./src/utils/postAuth')
+);
+
 const app = express();
 
 app.use(bodyParser.urlencoded({ extended: false }))

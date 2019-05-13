@@ -14,7 +14,7 @@ const log = console.log.bind(console);
 
 module.exports.logs = function logs(obj) {
     // TODO :: pass object to persistent logging tool
-    log({ caller: logs.caller, obj });
+    // log({ caller: logs.caller, obj });
 
     switch (obj.name) {
         default:
