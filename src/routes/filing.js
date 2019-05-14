@@ -1,5 +1,4 @@
-const { filing } = require('../models/index.js');
-const { fetchLatest } = require('../controllers/filings');
+const { fetchLatestFilings } = require('../controllers/filings');
 const noneFound = { message: 'No filing could be found!' };
 
 var express = require('express')
@@ -12,7 +11,7 @@ router
             return res.status(401).send({ err: 'No fetchSource provided.' });
         }
 
-        const result = await fetchLatest(fetchSource);
+        const result = await fetchLatestFilings(fetchSource);
         return res.status(200).send(result || noneFound);
     });
 

@@ -1,5 +1,6 @@
 const moment = require('moment');
 const { map, reduce } = require('lodash');
+const util = require('util');
 
 const { gaapIdentifiers, companies, filings, taxonomyExtensions } = require('../models');
 const { taxonomyExtensionTypes } = require('../utils/common-enums');
@@ -90,7 +91,7 @@ const aggregateTaxonomyExtensions = async (company, extensionObjs) => {
         return filtered;
     }, []);
 
-    logs(`aggregated ${createdExtensions.length} extensions for company ${foundCompany.name} cik ${foundCompany.cik}`);
+    logs(`aggregated ${createdExtensions.length} extensions for company ${company.name} cik ${company.cik}`);
     return createdExtensions;
 }
 
@@ -117,8 +118,13 @@ module.exports.processRawRssItem = async (rawRssItem) => {
         // format raw filing data and append
         //  taxonomy extensions to object
         let filing = formatRawFiling(rawRssItem, extensions, foundCompany._id);
-        filing = await filings.create(filing);
-        return filing._id;
+        const newFiling = await filings.create(filing);
+        if (!newFiling) {
+            errors(`unable to process filing company ${foundCompany.name} cik ${cik} accessionNumber ${accessionNumber}`)
+            return false;
+        }
+
+        return newFiling._id;
     } else {
         errors(`company could not be found cik ${cik}`);
     }

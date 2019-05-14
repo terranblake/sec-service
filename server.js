@@ -1,6 +1,7 @@
 const bodyParser = require('body-parser');
 const express = require('express');
-const { logs } = require('./src/utils/logging');
+const util = require('util');
+const { logs, errors } = require('./src/utils/logging');
 
 require('./src/utils/gcp/kms').decrypt(
     './config/default.json',
@@ -24,3 +25,20 @@ app
     .use('/api', require('./src/routes'));
 
 app.listen(PORT, logs(`listening on ${PORT}`));
+
+// TODO :: Wrap this as a subscription listener
+//          and move to utils
+require('./src/utils/gcp/')
+    .pubsub.subscribe(
+        'ProcessFilings',
+        60,
+        (message) => {
+            logs(`received message ${message.id}:`);
+            logs(`\tdata: ${message.data}`);
+            logs(`\tattributes: ${util.inspect(message.attributes, { showHidden: true, depth: null })}`);
+            logs(`\tpublished: ${message.publishTime}`);
+
+            message.ack();
+        },
+        errors
+    );

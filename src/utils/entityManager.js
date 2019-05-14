@@ -1,7 +1,9 @@
+const { logs } = require('./logging');
+
 let model = {};
 
 module.exports.getModel = (collectionName) => {
-    console.log(`getting model for ${collectionName}`);
+    logs(`getting model for ${collectionName}`);
     if (model[collectionName] === undefined) {
         model[collectionName] = require('../models/' + collectionName).model;
     }
