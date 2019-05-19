@@ -37,14 +37,6 @@ const factSchema = new Schema({
 const factModel = model('Fact', factSchema);
 module.exports.model = factModel;
 
-module.exports.createAll = async (items) => {
-    items.map(async (item) => {
-      item = await create(item);
-    });
-  
-    return items;
-  }
-
 module.exports.create = async (newItem) => {
     return await new factModel(newItem)
         .save()
@@ -52,6 +44,12 @@ module.exports.create = async (newItem) => {
             return item;
         })
         .catch(errors);
+}
+
+module.exports.createAll = async (items) => {
+    return items.map(async (item) => {
+        item = await factModel.create(item);
+    });
 }
 
 module.exports.deleteAll = async () => {

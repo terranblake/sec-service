@@ -11,6 +11,9 @@ module.exports = {
     identifierDocumentFlags: ['Statement', 'Disclosure'],
     dateTypes: ['instant', 'duration'],
     fetchLinks: {
-        'sec': 'https://www.sec.gov/Archives/edgar/xbrlrss.all.xml',
+        'sec': {
+            'all': 'https://www.sec.gov/Archives/edgar/xbrlrss.all.xml',
+            'by_cik': (cik=null, type='10-K', count=1000) => `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${cik}&type=${type}&dateb=&owner=exclude&start=0&count=${count}&output=atom`,
+        }
     },
 }

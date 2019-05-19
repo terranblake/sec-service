@@ -1,59 +1,9 @@
 const { gaapIdentifiers, facts, contexts } = require('../models');
 const { identifierPrefixes } = require('../utils/common-enums');
 
-/*
-"us-gaap:RepaymentsOfRelatedPartyDebt1": [
-            {
-                "$": {
-                    "contextRef": "From2019-01-01to2019-03-31",
-                    "unitRef": "USD",
-                    "xsi:nil": "true"
-                }
-            },
-            {
-                "_": "6000",
-                "$": {
-                    "contextRef": "From2018-01-01to2018-03-31",
-                    "unitRef": "USD",
-                    "decimals": "-3"
-                }
-            }
-        ],
-*/
+module.exports.formatFacts = async (unformattedFacts, extensionType, filing, company) => {
+    let expandedFacts = [];
 
-/*
-{
-    filing: {
-        type: Schema.Types.ObjectId,
-        ref: 'Filing',
-        required: true
-    },
-    company: {
-        type: Schema.Types.ObjectId,
-        ref: 'Company',
-        required: true
-    },
-    extensionType: {
-        type: String,
-        enum: require('../utils/common-enums').taxonomyExtensionTypes,
-        required: true
-    },
-    gaapIdentifiers: [{
-        type: Schema.Types.ObjectId,
-        ref: 'GAAPIdentifier',
-        required: true
-    }],
-    context: {
-        type: Schema.Types.ObjectId,
-        ref: 'Context',
-        required: false
-    },
-    value: String,
-}
-*/
-
-module.exports.formatFacts = async (unformattedFacts, contexts, extensionType, filing, company) => {
-    let formattedFacts = [];
     for (let fact in unformattedFacts) {
         // we only want facts we can process
         if (identifierPrefixes.find(p => fact.includes(p))) {
@@ -64,10 +14,9 @@ module.exports.formatFacts = async (unformattedFacts, contexts, extensionType, f
             // we only want facts we have a matching identifier for
             if (Array.isArray(identifiers) && identifiers.length) {
                 // console.log({ facts: unformattedFacts[fact], identifiers, fact });
-                const likeFacts = formatLikeFacts(unformattedFacts[fact], extensionType, filing, company, identifiers);
-                //  TODO :: Simplify once [formatLikeFacts] is fixed
-                likeFacts.forEach((formatted) => {
-                    formattedFacts.push(formatted);
+                const likeFacts = await expandAndFormatLikeFacts(unformattedFacts[fact], extensionType, filing, company, identifiers);
+                likeFacts && likeFacts.forEach((formatted) => {
+                    expandedFacts.push(formatted);
                 });
             } else {
                 console.info(`no identifier found for ${fact} company ${company} filing ${filing}`);
@@ -75,36 +24,67 @@ module.exports.formatFacts = async (unformattedFacts, contexts, extensionType, f
         }
     }
 
-    return facts;
+    return expandedFacts;
 }
 
-function formatLikeFacts(facts, extensionType, filing, company, gaapIdentifiers) {
-    return facts.map((fact) => {
+async function expandAndFormatLikeFacts(facts, extensionType, filing, company, gaapIdentifiers) {
+    for (let i in facts) {
+        fact = facts[i];
+
         const {
             contextRef,
             unitRef,
             decimals,
         } = fact['$'];
-        console.log({ contextRef, unitRef, decimals });
 
-        // TODO :: normalize [value] based on unitRef and decimals objects
+        let value = fact['_'];
+        value = value && normalizeValueWithDecimals(value, decimals, unitRef);
 
-        const query = { filing, company, extensionType, label: contextRef };
-        contexts.model.findOne(query, (err, res) => {
-            console.log({ err, res });
-
-            if (res) {
-                return {
-                    company,
-                    filing,
-                    extensionType,
-                    gaapIdentifiers,
-                    value: fact['_'],
-                    context: res._id,
-                }
+        const query = { filing, company, label: contextRef };
+        const res = await contexts.model.findOne(query);
+        if (res) {
+            fact = {
+                company,
+                filing,
+                extensionType,
+                gaapIdentifiers,
+                value,
+                context: res._id,
             }
-        })
-    });
+            facts[i] = fact;
+        }
+    };
+
+    return facts;
+}
+
+function normalizeValueWithDecimals(value, decimals, unitRef) {
+    if (['USD'].includes(unitRef)) {
+        console.error(`normalizing ${unitRef} is not supported`);
+        return value;
+    }
+
+    let sign = decimals && decimals !== 0 && decimals.slice(0, 1);
+    sign = sign === '-' ? '-' : decimals !== 0 ? '+' : '-';
+
+    if (decimals && !['+', '-'].includes(sign)) {
+        console.error(`cannot normalize[${value}] without +/- sign[${sign}] in decimals[${decimals}]`);
+        return value;
+    }
+
+    places = decimals.slice(1);
+    scalar =
+        sign === '-' ?
+            // postive scalar
+            Math.pow(10, Number(places)) :
+            // stripped decimals isn't 0
+            places !== '' ?
+                // negative scalar
+                Math.pow(10, Number(-1 * places)) :
+                // neutral
+                1;
+
+    return Number(value) * scalar;
 }
 
 module.exports.formatContexts = (filing, company, extensionContents) => {

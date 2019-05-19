@@ -1,40 +1,58 @@
 const { filings, facts, taxonomyExtensions } = require('../models');
 const {
     createFilingFromRssItem,
-    downloadExtension,
+    download,
     saveExtension,
-    reformatExtension
+    processExtension,
+    scrapeFilingFromSec
 } = require('../utils/raw-data-helpers');
 const gcp = require('../utils/gcp');
 const { fetchLinks } = require('../utils/common-enums');
-const { logs, errors } = require('../utils/logging');
-const async = require('async');
+const { logs } = require('../utils/logging');
 const { rss, taxonomyExtension } = require('../utils/parser-options');
+const config = require('config');
 
-const { each } = require('lodash');
+// TODO :: Update encrypted config to include this
+// const pubsubEnabled = config.get('google-cloud.pub-sub.enabled');
 
-module.exports.fetchLatestFilings = async function (fetchSource) {
+module.exports.fetch = async function (source, tickers, type) {
     let Parser = require('rss-parser');
     let parser = new Parser(rss);
 
-    const url = fetchLinks[fetchSource];
-    let feed = await parser.parseURL(url);
+    let urls = [fetchLinks.sec.all];
+    if (tickers) {
+        urls = tickers.split(',').map(t => fetchLinks[source].by_cik(t, type))
+    }
 
-    for (const key in Object.keys(feed.items)) {
-        const item = feed.items[key];
-        const filing = await createFilingFromRssItem(item);
-
-        // TODO :: Make a topic resolver for a
-        //          decoupled topic approach
-        if (filing) {
-            gcp.pubsub.publish('UnprocessedFilings', filing);
-        }
-    };
+    for (let url in urls) {
+        url = urls[url];
+        logs(`processing rss feed at ${url}`);
+        await processRssFeed(parser, url);
+    }
 
     return feed.items.length;
 };
 
-module.exports.parseFiling = async function (filing) {
+async function processRssFeed(parser, url) {
+    let feed = await parser.parseURL(url);
+
+    for (const key in Object.keys(feed.items)) {
+        let item = feed.items[key];
+        const filing = item.filing && 
+            await createFilingFromRssItem(item) ||
+            await scrapeFilingFromSec(item);
+
+        // TODO :: Make a topic resolver for a
+        //          decoupled topic approach
+        // TODO :: Use config to toggle pubsub
+        //          functionality for filing processors
+        if (filing) {
+            gcp.pubsub.publish('UnprocessedFilings', filing);
+        }
+    };
+}
+
+module.exports.parseOne = async function (filing) {
     const { taxonomyExtensions, company } = await filings.model
         .findOne({ _id: filing }, { taxonomyExtensions: 1 })
         .lean()
@@ -47,17 +65,13 @@ module.exports.parseFiling = async function (filing) {
         extension = taxonomyExtensions[extension];
         const { url, extensionType } = extension;
 
-        let elements = await downloadExtension(url, taxonomyExtension, true);
+        let elements = await download(url, taxonomyExtension, true);
 
         // TODO :: Remove this in favor of check that the
         //          accession number already exists in db
         saveExtension(extension.extensionType, elements);
-        const formattedExtension = reformatExtension(filing, company._id, extensionType, elements);
+        const facts = processExtension(filing, company._id, extensionType, elements);
 
-        // if (elements) {
-        //     elements = await facts.createAll(extensionElements);
-        //     extension = await taxonomyExtensions.model.findByIdAndUpdate(filing, { elements });
-        // }
     }
 
     return taxonomyExtensions;

@@ -28,9 +28,13 @@
     "moment": "^2.24.0",
     "mongoose": "^5.5.4",
     "parse-xbrl": "^1.1.5",
+    "parse5": "^5.1.0",
     "request": "^2.88.0",
     "rss-parser": "^3.7.0",
     "xlsx": "^0.14.3",
-    "xml2js": "^0.4.19"
+    "xml2js": "^0.4.19",
+    "xmldom": "^0.1.27",
+    "xmlserializer": "^0.6.1",
+    "xpath": "0.0.27"
   }
 }

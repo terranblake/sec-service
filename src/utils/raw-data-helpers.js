@@ -5,7 +5,9 @@ const util = require('util');
 const { parseString } = require('xml2js');
 const request = require("request");
 
-const { gaapIdentifiers, companies, filings, taxonomyExtensions, contexts } = require('../models');
+const { formatContexts, formatFacts } = require('./taxonomy-extension-helpers');
+
+const { gaapIdentifiers, companies, filings, taxonomyExtensions, contexts, facts } = require('../models');
 const { taxonomyExtensionTypes } = require('../utils/common-enums');
 const { logs, errors } = require('../utils/logging');
 
@@ -111,7 +113,7 @@ module.exports.createFilingFromRssItem = async (rawRssItem) => {
 
         if (Array.isArray(foundFiling) && foundFiling.length) {
             logs(`duplicate filing company ${foundCompany.name} cik ${cik} accessionNumber ${accessionNumber}`);
-            return null;
+            return;
         }
 
         // Format raw extension files
@@ -133,6 +135,59 @@ module.exports.createFilingFromRssItem = async (rawRssItem) => {
     }
 
     return false;
+}
+
+module.exports.scrapeFilingFromSec = async (rssItem) => {
+    /*
+     'accession-nunber': [ '0000320193-18-000145' ],
+     'file-number': [ '001-36743' ],
+     'file-number-href': [ 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&filenum=001-36743&owner=exclude&count=100' ],
+     'filing-date': [ '2018-11-05' ],
+     'filing-href': [ 'https://www.sec.gov/Archives/edgar/data/320193/000032019318000145/0000320193-18-000145-index.htm' ],
+     'filing-type': [ '10-K' ],
+     'film-number': [ '181158788' ],
+     'form-name': [ 'Annual report [Section 13 and 15(d), not S-K Item 405]' ],
+     size: [ '12 MB' ],
+     xbrl_href: [ 'https://www.sec.gov/cgi-bin/viewer?action=view&cik=320193&accession_number=0000320193-18-000145&xbrl_type=v' ] }
+    */
+    const xpath = require('xpath');
+    const parse5 = require('parse5');
+    const xmlser = require('xmlserializer');
+    const dom = require('xmldom').DOMParser;
+
+    const filingHref = rssItem.link;
+    const filing = await this.download(filingHref, {}, false);
+    const document = parse5.parse(filing.toString());
+    const xhtml = xmlser.serializeToString(document);
+    const doc = new dom().parseFromString(xhtml);
+
+    // "//*[@scope=\"row\"]/*"          get all extension documents
+    // "//*[@class=\"tableFile\"]"      get all extension documents with metadata
+    // "//*[@class=\"info\"]"           get filing date, acceptanceDateTime and report period
+    // "//*[@class=\"mailer\"]"         business address/info
+    // "//*[@class=\"companyInfo\"]"    other company info
+    const result = xpath.evaluate(
+        "//*[@class=\"identInfo\"]",            // xpathExpression
+        doc,                        // contextNode
+        null,                       // namespaceResolver
+        xpath.XPathResult.ANY_TYPE, // resultType
+        null                        // result
+    );
+
+    node = result.iterateNext();
+    while (node) {
+        console.log(node.localName + ": " + node && node.firstChild && node.firstChild.data);
+        console.log("Node: " + node.toString());
+
+        const newDoc = new dom().parseFromString(node.toString());
+        // console.log(xpath.select('/div', newDoc));
+
+        node = result.iterateNext();
+    }
+
+    // const select = xpath.useNamespaces({ "x": "http://www.w3.org/1999/xhtml" });
+    // const nodes = select("//x:*[@class=\"formGrouping\"]", doc);
+    // console.log(nodes);
 }
 
 module.exports.loadCompaniesFromJson = async (path, next) => {
@@ -172,28 +227,32 @@ module.exports.createGaapTaxonomyTree = async (tree) => {
     logs('finished creating gaap taxonomy tree');
 }
 
-module.exports.downloadExtension = (extensionLink, parsingOptions, jsonify = true) => {
+module.exports.download = (extensionLink, parsingOptions, parse = true) => {
     return new Promise((resolve, reject) => {
-        let XML = "";
+        let data = "";
 
         request
             .get(extensionLink)
             .on('response', (response) => {
                 logs(`\tdownloading ${extensionLink}`);
                 response.on('data', (chunk) => {
-                    XML += chunk;
+                    data += chunk;
                 });
 
                 response.on('end', () => {
                     logs(`\tdownloaded ${extensionLink}`);
-                    parseString(XML, parsingOptions, (err, result) => {
-                        logs(`\t\tparsed ${extensionLink}`);
-                        if (err) {
-                            logs(err);
-                        }
+                    if (parse) {
+                        parseString(data, parsingOptions, (err, result) => {
+                            logs(`\t\tparsed ${extensionLink}`);
+                            if (err) {
+                                logs(err);
+                            }
 
-                        resolve(result);
-                    });
+                            resolve(result);
+                        });
+                    }
+
+                    resolve(data);
                 });
             })
             .on('error', (err) => reject(err));
@@ -202,8 +261,7 @@ module.exports.downloadExtension = (extensionLink, parsingOptions, jsonify = tru
 
 module.exports.saveExtension = (type, data) => require('fs').writeFileSync(`./data/test/${type}.json`, JSON.stringify(data));
 
-const { formatContexts, formatFacts } = require('./taxonomy-extension-helpers');
-module.exports.reformatExtension = async (filingId, companyId, type, elements) => {
+module.exports.processExtension = async (filingId, companyId, type, elements) => {
     // this probably won't work for everything
     elements = elements["xbrli:xbrl"] || elements.xbrl;
 
@@ -213,8 +271,9 @@ module.exports.reformatExtension = async (filingId, companyId, type, elements) =
         let newContexts = formatContexts(filingId, companyId, elements);
         newContexts = await contexts.createAll(newContexts);
 
-        const gaapValues = await formatFacts(elements, newContexts, type, filingId, companyId);
-        return gaapValues;
+        let newFacts = await formatFacts(elements, type, filingId, companyId);
+        newFacts = await facts.createAll(newFacts);
+        return facts;
     }
 }
 

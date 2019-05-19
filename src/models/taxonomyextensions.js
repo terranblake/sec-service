@@ -16,7 +16,7 @@ const taxonomyExtensionSchema = new Schema({
     enum: require('../utils/common-enums').extensionElementStatuses,
     required: true,
   },
-  elements: [{
+  facts: [{
     type: Schema.Types.ObjectId,
     ref: 'Fact',
     required: false,

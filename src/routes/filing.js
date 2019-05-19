@@ -1,16 +1,18 @@
-const { parseFiling } = require('../controllers/filings');
+const { parseOne, fetch } = require('../controllers/filings');
 const noneFound = { message: 'No filing could be found!' };
 var express = require('express')
 var router = express.Router({ mergeParams: true });
 
 router
-    .post('/populate', async (req, res) => {
-        const { fetchSource } = req.body;
-        if (!fetchSource) {
-            return res.status(401).send({ err: 'No fetchSource provided.' });
+    .post('/fetch', async (req, res) => {
+        const { source, tickers, type } = req.body;
+        if (!source) {
+            return res.status(401).send({ err: 'No source provided.' });
         }
 
-        const result = await fetchLatestFilings(fetchSource);
+        !tickers && console.info(`no tickers provided. attempting to fetch from summary rss feed for ${source}`);
+
+        const result = await fetch(source, tickers, type);
         return res.status(200).send(result || noneFound);
     })
     .post('/parse', async (req, res) => {
@@ -19,7 +21,7 @@ router
             return res.status(401).send({ err: 'No id provided.' });
         }
 
-        const result = await parseFiling(id);
+        const result = await parseOne(id);
         return res.status(200).send(result || noneFound);
     });
 
