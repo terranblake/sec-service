@@ -85,7 +85,7 @@ module.exports.model = gaapIdentifierModel;
 
 module.exports.createAll = async (items) => {
     return require('../utils/raw-data-helpers')
-        .createByDepth(
+        .createGaapTaxonomyTree(
             items, 
             this.create
         );

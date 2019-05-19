@@ -11,15 +11,25 @@ const taxonomyExtensionSchema = new Schema({
     enum: require('../utils/common-enums').taxonomyExtensionTypes,
     required: true,
   },
-  elementStatus: {
+  status: {
     type: String,
     enum: require('../utils/common-enums').extensionElementStatuses,
     required: true,
   },
-  elements: {
-    type: [require('./filingelements').model.schema],
+  elements: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Fact',
     required: false,
-  },
+  }],
+  contexts: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Context',
+    required: false
+  }],
+  units: [{
+    type: Object,
+    required: false
+  }],
   sequence: String,
   fileName: String,
   fileType: String,

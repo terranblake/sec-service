@@ -1,33 +1,52 @@
 const { model, Schema } = require('mongoose');
 const { errors } = require('../utils/logging');
 
-const filingElementSchema = new Schema({
+const factSchema = new Schema({
     filing: {
         type: Schema.Types.ObjectId,
-        ref: 'Filing'
+        ref: 'Filing',
+        required: true
     },
     company: {
         type: Schema.Types.ObjectId,
         ref: 'Company',
+        required: true
     },
     extensionType: {
         type: String,
         enum: require('../utils/common-enums').taxonomyExtensionTypes,
-        required: true,
+        required: true
     },
-    gaapIdentifier: String,
+    gaapIdentifiers: [{
+        type: Schema.Types.ObjectId,
+        ref: 'GAAPIdentifier',
+        required: true
+    }],
+    context: {
+        type: Schema.Types.ObjectId,
+        ref: 'Context',
+        required: false
+    },
     properties: [{
         property: String,
         value: String,
     }],
-    content: String,
+    value: String,
 });
 
-const filingElementModel = model('FilingElement', filingElementSchema);
-module.exports.model = filingElementModel;
+const factModel = model('Fact', factSchema);
+module.exports.model = factModel;
+
+module.exports.createAll = async (items) => {
+    items.map(async (item) => {
+      item = await create(item);
+    });
+  
+    return items;
+  }
 
 module.exports.create = async (newItem) => {
-    return await new model(newItem)
+    return await new factModel(newItem)
         .save()
         .then((item) => {
             return item;
@@ -36,7 +55,7 @@ module.exports.create = async (newItem) => {
 }
 
 module.exports.deleteAll = async () => {
-    return await model
+    return await factModel
         .deleteMany()
         .then((res) => {
             return res;

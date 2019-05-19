@@ -8,7 +8,10 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "nodemonConfig": {
-    "ignore": ["data/*", "config/*"]
+    "ignore": [
+      "data/*",
+      "config/*"
+    ]
   },
   "keywords": [],
   "author": "",
@@ -24,6 +27,8 @@
     "lodash": "^4.17.11",
     "moment": "^2.24.0",
     "mongoose": "^5.5.4",
+    "parse-xbrl": "^1.1.5",
+    "request": "^2.88.0",
     "rss-parser": "^3.7.0",
     "xlsx": "^0.14.3",
     "xml2js": "^0.4.19"

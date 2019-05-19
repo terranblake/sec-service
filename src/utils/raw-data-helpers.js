@@ -2,7 +2,10 @@ const moment = require('moment');
 const { map, reduce } = require('lodash');
 const util = require('util');
 
-const { gaapIdentifiers, companies, filings, taxonomyExtensions } = require('../models');
+const { parseString } = require('xml2js');
+const request = require("request");
+
+const { gaapIdentifiers, companies, filings, taxonomyExtensions, contexts } = require('../models');
 const { taxonomyExtensionTypes } = require('../utils/common-enums');
 const { logs, errors } = require('../utils/logging');
 
@@ -82,7 +85,7 @@ const aggregateTaxonomyExtensions = async (company, extensionObjs) => {
                 fileType: extension['$']['edgar:type'],
                 fileSize: extension['$']['edgar:size'],
                 url: extension['$']['edgar:url'],
-                elementStatus: 'unprocessed',
+                status: 'unprocessed',
             };
 
             const { _id } = await taxonomyExtensions.create(extension);
@@ -95,7 +98,7 @@ const aggregateTaxonomyExtensions = async (company, extensionObjs) => {
     return createdExtensions;
 }
 
-module.exports.processRawRssItem = async (rawRssItem) => {
+module.exports.createFilingFromRssItem = async (rawRssItem) => {
     const cik = Number(rawRssItem.filing['edgar:cikNumber']);
     const accessionNumber = rawRssItem.filing['edgar:accessionNumber'][0];
 
@@ -140,9 +143,10 @@ module.exports.loadGaapIdentifiersFromJson = async (path, sheet, next) => {
     return require('./xlsx').parse(path, sheet, next);
 }
 
-module.exports.createByDepth = async (tree) => {
+module.exports.createGaapTaxonomyTree = async (tree) => {
     const sortedTree = sortTree(tree);
     logs('finished sorting tree');
+    logs('started creating gaap taxonomy tree');
 
     let depthC = 0;
     for (let leaf in sortedTree) {
@@ -157,13 +161,61 @@ module.exports.createByDepth = async (tree) => {
             leaf.definition = extractDefitionObjectFromString(leaf.definition);
             leaf.parent = extractNameFromParent(leaf.parent, leaf.prefix, true);
             leaf.parent = await gaapIdentifiers.findParentIdentifier(leaf);
-            leaf.parent && logs(`found parent identifier ${identifier} depth ${leaf.depth - 1} parent ${leaf.parent}`);
+            leaf.parent && logs(`found parent identifier for ${leaf.name} depth ${leaf.depth - 1} parent ${leaf.parent}`);
         } else {
             logs(`top-level element ${leaf.name} depth ${leaf.depth - 1}`);
         }
-        
+
         await gaapIdentifiers.create(leaf);
     };
+
+    logs('finished creating gaap taxonomy tree');
+}
+
+module.exports.downloadExtension = (extensionLink, parsingOptions, jsonify = true) => {
+    return new Promise((resolve, reject) => {
+        let XML = "";
+
+        request
+            .get(extensionLink)
+            .on('response', (response) => {
+                logs(`\tdownloading ${extensionLink}`);
+                response.on('data', (chunk) => {
+                    XML += chunk;
+                });
+
+                response.on('end', () => {
+                    logs(`\tdownloaded ${extensionLink}`);
+                    parseString(XML, parsingOptions, (err, result) => {
+                        logs(`\t\tparsed ${extensionLink}`);
+                        if (err) {
+                            logs(err);
+                        }
+
+                        resolve(result);
+                    });
+                });
+            })
+            .on('error', (err) => reject(err));
+    });
+}
+
+module.exports.saveExtension = (type, data) => require('fs').writeFileSync(`./data/test/${type}.json`, JSON.stringify(data));
+
+const { formatContexts, formatFacts } = require('./taxonomy-extension-helpers');
+module.exports.reformatExtension = async (filingId, companyId, type, elements) => {
+    // this probably won't work for everything
+    elements = elements["xbrli:xbrl"] || elements.xbrl;
+
+    // don't support other types until
+    //  instance parsing is stable
+    if (type === 'instance') {
+        let newContexts = formatContexts(filingId, companyId, elements);
+        newContexts = await contexts.createAll(newContexts);
+
+        const gaapValues = await formatFacts(elements, newContexts, type, filingId, companyId);
+        return gaapValues;
+    }
 }
 
 const sortTree = (tree) => {

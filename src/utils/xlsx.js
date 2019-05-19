@@ -1,13 +1,17 @@
 const { logs } = require('../utils/logging');
 
-// TODO :: Create job and listen for events
+// TODO :: Update to handle parsing multiple
+//          sheets without reloading the
+//          entire file
 module.exports.parse = (filePath, sheetName) => {
-    const hrStart = process.hrtime();
+    const hrstart = process.hrtime();
 
-    logs(`parsing sheet ${sheetName}`);
+    logs(`loading workbook ${filePath}`);
 
     var XLSX = require('xlsx');
     var workbook = XLSX.readFile(filePath);
+    
+    logs(`loaded workbook ${filePath}`);
 
     var sheet_name_list = workbook.SheetNames;
     logs(`found the following sheets ${sheet_name_list}`);
@@ -16,6 +20,6 @@ module.exports.parse = (filePath, sheetName) => {
     workbookJson = XLSX.utils.sheet_to_json(workbook.Sheets[sheet_name_list[workbookIndex]]);
 
     const hrend = process.hrtime(hrstart)
-    logs(`parsed sheet ${sheetName} path ${filePath} in ${hrend[0]}s ${hrend[1] / 1000000}ms`);
+    logs(`loaded workbook in ${hrend[0]}s ${hrend[1] / 1000000}ms`);
     return workbookJson;
 }

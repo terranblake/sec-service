@@ -15,8 +15,9 @@ router
 
         res.status(400).send('tree has not been grown... please seed and hydrate before picking.');
     })
-    .post('/seed/:type', async (req, res) => {
-        const { body: { path }, params: { type } } = req;
+    .post('/seed', async (req, res) => {
+        const { path, type } = req.body;
+
         logs(`seeding ${type} from json`);
         const seeds = await seedTree(path, type);
 

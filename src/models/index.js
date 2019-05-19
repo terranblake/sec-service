@@ -1,7 +1,8 @@
 module.exports = {
     filings: require('./filings'),
-    filingElements: require('./filingelements'),
+    facts: require('./facts'),
     companies: require('./companies'),
     taxonomyExtensions: require('./taxonomyextensions'),
     gaapIdentifiers: require('./gaapidentifiers'),
+    contexts: require('./contexts'),
 };

@@ -37,11 +37,11 @@ const filingSchema = new Schema({
   assistantDirector: String,
   assignedSic: String,
   fiscalYearEnd: Date,
-  taxonomyExtensions: {
-    type: [Schema.Types.ObjectId],
+  taxonomyExtensions: [{
+    type: Schema.Types.ObjectId,
     ref: 'TaxonomyExtension',
     required: true,
-  },
+  }],
 });
 
 const filingModel = model('Filing', filingSchema);

@@ -28,6 +28,7 @@ module.exports.logs = function logs(obj) {
 }
 
 module.exports.errors = function errors(obj) {
+    console.log(';P', { obj });
     switch (obj.name) {
         case 'TypeError':
         case 'MongoError':
