@@ -1,5 +1,5 @@
 const { gaapIdentifiers, facts, contexts } = require('../models');
-const { identifierPrefixes } = require('../utils/common-enums');
+const { identifierPrefixes, factCurrencies } = require('../utils/common-enums');
 
 module.exports.formatFacts = async (unformattedFacts, extensionType, filing, company) => {
     let expandedFacts = [];
@@ -59,7 +59,7 @@ async function expandAndFormatLikeFacts(facts, extensionType, filing, company, g
 }
 
 function normalizeValueWithDecimals(value, decimals, unitRef) {
-    if (['USD'].includes(unitRef)) {
+    if (!factCurrencies.includes(unitRef)) {
         console.error(`normalizing ${unitRef} is not supported`);
         return value;
     }

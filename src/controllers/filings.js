@@ -1,4 +1,5 @@
-const { filings, facts, taxonomyExtensions } = require('../models');
+const { filings } = require('../models');
+const { validationReducer } = require('../controllers/companies');
 const {
     createFilingFromRssItem,
     download,
@@ -14,40 +15,52 @@ const config = require('config');
 
 // TODO :: Update encrypted config to include this
 // const pubsubEnabled = config.get('google-cloud.pub-sub.enabled');
-
 module.exports.fetch = async function (source, tickers, type) {
     let Parser = require('rss-parser');
     let parser = new Parser(rss);
 
-    let urls = [fetchLinks.sec.all];
+    let companies = [{ url: fetchLinks.sec.all }];
+
+    // create url for each rss feed
     if (tickers) {
-        urls = tickers.split(',').map(t => fetchLinks[source].by_cik(t, type))
+        companies = await validationReducer(tickers.split(','));
+        companies = companies.map(c => {
+            c['url'] = fetchLinks[source].by_cik(c.ticker, type);
+            return c;
+        });
+        console.log({ companies })
+    }
+ 
+    // process each rss feed
+    for (let company in companies) {
+        company = companies[company];
+        logs(`processing rss feed at ${company}`);
+        await processRssFeed(parser, company);
     }
 
-    for (let url in urls) {
-        url = urls[url];
-        logs(`processing rss feed at ${url}`);
-        await processRssFeed(parser, url);
-    }
-
-    return feed.items.length;
+    return urls;
 };
 
-async function processRssFeed(parser, url) {
-    let feed = await parser.parseURL(url);
+async function processRssFeed(parser, company) {
+    let feed = await parser.parseURL(company.url);
 
     for (const key in Object.keys(feed.items)) {
         let item = feed.items[key];
-        const filing = item.filing && 
-            await createFilingFromRssItem(item) ||
-            await scrapeFilingFromSec(item);
+
+        if (item.filing) {
+            console.log('creating filing from rss item');
+            item = await createFilingFromRssItem(item);
+        } else {
+            console.log('scraping filing from sec');
+            item = await scrapeFilingFromSec(item, company);
+        }
 
         // TODO :: Make a topic resolver for a
         //          decoupled topic approach
         // TODO :: Use config to toggle pubsub
         //          functionality for filing processors
-        if (filing) {
-            gcp.pubsub.publish('UnprocessedFilings', filing);
+        if (item) {
+            gcp.pubsub.publish('UnprocessedFilings', item);
         }
     };
 }

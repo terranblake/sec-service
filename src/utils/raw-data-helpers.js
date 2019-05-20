@@ -1,15 +1,15 @@
 const moment = require('moment');
 const { map, reduce } = require('lodash');
-const util = require('util');
 
 const { parseString } = require('xml2js');
 const request = require("request");
 
-const { formatContexts, formatFacts } = require('./taxonomy-extension-helpers');
-
 const { gaapIdentifiers, companies, filings, taxonomyExtensions, contexts, facts } = require('../models');
 const { taxonomyExtensionTypes } = require('../utils/common-enums');
 const { logs, errors } = require('../utils/logging');
+const { formatContexts, formatFacts } = require('./taxonomy-extension-helpers');
+
+const { getCompanyMetadata } = require('../controllers/companies');
 
 const formatRawFiling = (filingObj, taxonomyExtensions, company) => {
     return {
@@ -104,7 +104,15 @@ module.exports.createFilingFromRssItem = async (rawRssItem) => {
     const cik = Number(rawRssItem.filing['edgar:cikNumber']);
     const accessionNumber = rawRssItem.filing['edgar:accessionNumber'][0];
 
-    const foundCompany = await companies.findByCik(cik);
+    let foundCompany = await companies.findByCik(cik);
+    if (!foundCompany) {
+        foundCompany = await getCompanyMetadata(cik);
+
+        // TODO :: Stabilize cik to ticker conversion in metadata-service
+        console.log('skipping filing processing until ticker to cik conversion is stable');
+        foundCompany = null;
+    }
+
     if (foundCompany) {
         const foundFiling = await filings.get({
             company: foundCompany && foundCompany._id || null,
@@ -137,57 +145,39 @@ module.exports.createFilingFromRssItem = async (rawRssItem) => {
     return false;
 }
 
-module.exports.scrapeFilingFromSec = async (rssItem) => {
-    /*
-     'accession-nunber': [ '0000320193-18-000145' ],
-     'file-number': [ '001-36743' ],
-     'file-number-href': [ 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&filenum=001-36743&owner=exclude&count=100' ],
-     'filing-date': [ '2018-11-05' ],
-     'filing-href': [ 'https://www.sec.gov/Archives/edgar/data/320193/000032019318000145/0000320193-18-000145-index.htm' ],
-     'filing-type': [ '10-K' ],
-     'film-number': [ '181158788' ],
-     'form-name': [ 'Annual report [Section 13 and 15(d), not S-K Item 405]' ],
-     size: [ '12 MB' ],
-     xbrl_href: [ 'https://www.sec.gov/cgi-bin/viewer?action=view&cik=320193&accession_number=0000320193-18-000145&xbrl_type=v' ] }
-    */
-    const xpath = require('xpath');
-    const parse5 = require('parse5');
-    const xmlser = require('xmlserializer');
-    const dom = require('xmldom').DOMParser;
+module.exports.scrapeFilingFromSec = async (rssItem, company) => {
+    let filing = {}
+    const { _id, ticker } = company;
+    
+    parseString(rssItem.content, (err, result) => {
+        result = result.div;
 
-    const filingHref = rssItem.link;
-    const filing = await this.download(filingHref, {}, false);
-    const document = parse5.parse(filing.toString());
-    const xhtml = xmlser.serializeToString(document);
-    const doc = new dom().parseFromString(xhtml);
+        filing = {
+            company: _id,
+            source: 'sec',
+            sourceLink: rssItem.link,
+            publishTitle: rssItem.title,
+            publishedAt: rssItem.pubDate,
+            filingType: result['filing-type'][0],
+            filingDate: result['filing-date'][0],
+            accessionNumber: result['accession-nunber'][0],
+            fileNumber: result['file-number'][0],
+        }
+    });
 
-    // "//*[@scope=\"row\"]/*"          get all extension documents
-    // "//*[@class=\"tableFile\"]"      get all extension documents with metadata
-    // "//*[@class=\"info\"]"           get filing date, acceptanceDateTime and report period
-    // "//*[@class=\"mailer\"]"         business address/info
-    // "//*[@class=\"companyInfo\"]"    other company info
-    const result = xpath.evaluate(
-        "//*[@class=\"identInfo\"]",            // xpathExpression
-        doc,                        // contextNode
-        null,                       // namespaceResolver
-        xpath.XPathResult.ANY_TYPE, // resultType
-        null                        // result
-    );
+    // TODO :: Provide the remaining data from metadata-service
+    // acceptanceDatetime: ,
+    // period: ,
+    // assistantDirector: ,
+    // assignedSic: ,
+    // fiscalYearEnd: ,
 
-    node = result.iterateNext();
-    while (node) {
-        console.log(node.localName + ": " + node && node.firstChild && node.firstChild.data);
-        console.log("Node: " + node.toString());
-
-        const newDoc = new dom().parseFromString(node.toString());
-        // console.log(xpath.select('/div', newDoc));
-
-        node = result.iterateNext();
-    }
-
-    // const select = xpath.useNamespaces({ "x": "http://www.w3.org/1999/xhtml" });
-    // const nodes = select("//x:*[@class=\"formGrouping\"]", doc);
-    // console.log(nodes);
+    // taxonomyExtensions: ,
+    const extensions = await this.getFilingextensions(ticker, filing.accessionNumber);
+    // TODO :: Finish taxonomyExtension validation
+    //          and creation for filings fetching
+    //          by specific company
+    // filing.taxonomyExtensions = 
 }
 
 module.exports.loadCompaniesFromJson = async (path, next) => {
@@ -286,5 +276,32 @@ const sortTree = (tree) => {
         if (depthA > depthB)
             return 1;
         return 0;
+    });
+}
+
+module.exports.getFilingMetadata = (ticker, accessionNumber) => {
+    const config = require('config');
+    // TODO :: Add metadata-service to encrypted config
+    const metadataService = config.has('metadata-service.base') || 'http://localhost:5000';
+    const endpoint = `${metadataService}/filings?ticker=${ticker}&accessionNumber=${accessionNumber}`;
+
+    return new Promise((resolve, reject) => {
+        let data = "";
+        request
+            .get(endpoint)
+            .on('response', (response) => {
+                logs(`retrieving metadata for ${accessionNumber}`);
+                response.on('data', (chunk) => {
+                    data += chunk;
+                });
+
+                response.on('end', () => {
+                    logs(`retrieved metadata for ${accessionNumber}`);
+                    data = JSON.parse(data);
+                    console.log(`retrieved metadata for ${accessionNumber}`);
+                    resolve(data);
+                });
+            })
+            .on('error', (err) => reject(err));
     });
 }

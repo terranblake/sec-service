@@ -6,7 +6,7 @@ module.exports = {
     ],
     extensionElementStatuses: ['unprocessed', 'queued', 'processing', 'finished', 'failed'],
     taxonomyExtensionTypes: ['calculation', 'presentation', 'label', 'definition', 'instance'],
-    filingTypes: ['10-K', '10-Q', '20-F', 'S-1', 'POS AM', 'S-1/A', '485BPOS', '10-K/A', '497', '10-Q/A', '40-F'],
+    filingTypes: ['10-K', '10-Q', '20-F', 'S-1', 'POS AM', 'S-1/A', '485BPOS', '10-K/A', '497', '10-Q/A', '40-F', '8-K'],
     identifierPrefixes: ['us-gaap', 'srt', 'gaap'],
     identifierDocumentFlags: ['Statement', 'Disclosure'],
     dateTypes: ['instant', 'duration'],
@@ -16,4 +16,5 @@ module.exports = {
             'by_cik': (cik=null, type='10-K', count=1000) => `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${cik}&type=${type}&dateb=&owner=exclude&start=0&count=${count}&output=atom`,
         }
     },
+    factCurrencies: ['USD', 'iso4217_USD', 'iso4217-usd', 'usd', 'U_iso4217USD']
 }

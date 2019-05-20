@@ -1,6 +1,7 @@
 const bodyParser = require('body-parser');
 const express = require('express');
 const util = require('util');
+const { parseOne } = require('./src/controllers/filings');
 const { logs, errors } = require('./src/utils/logging');
 
 require('./src/utils/gcp/kms').decrypt(
@@ -37,7 +38,7 @@ require('./src/utils/gcp/')
             logs(`\tdata: ${message.data}`);
             logs(`\tattributes: ${util.inspect(message.attributes, { showHidden: true, depth: null })}`);
             logs(`\tpublished: ${message.publishTime}`);
-
+            parseOne(message.data);
             message.ack();
         },
         errors

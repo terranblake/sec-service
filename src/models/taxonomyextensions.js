@@ -5,6 +5,7 @@ const taxonomyExtensionSchema = new Schema({
   company: {
     type: Schema.Types.ObjectId,
     ref: 'Company',
+    required: true
   },
   extensionType: {
     type: String,

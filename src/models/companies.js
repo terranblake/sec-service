@@ -5,27 +5,38 @@ const companySchema = new Schema({
     name: {
         type: String,
         required: true,
-        unique: true,
+        lowercase: true
     },
-    sic: String,
+    sic: {
+        type: String,
+        lowercase: true
+    },
     ticker: {
         type: String,
         required: true,
-        unique: true,
+        lowercase: true
     },
     cik: {
         type: String,
         required: true,
         unique: true,
+        lowercase: true
     },
     exchange: {
         type: String,
-        enum: ['nasdaq', 'nyse'],
-        required: true,
+        enum: ['nasdaq', 'nyse', 'otc', 'otcbb', 'bats', 'nyse mkt', 'nyse arca', null],
+        required: false,
+        lowercase: true
     },
     state: String,
     address: String,
 });
+
+companySchema.index({
+    ticker: 1,
+    exchange: 1,
+    sic: 1
+}, { unique: true })
 
 const companyModel = model('Company', companySchema);
 module.exports.model = companyModel;
