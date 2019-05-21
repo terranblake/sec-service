@@ -44,6 +44,7 @@ const extractDefitionObjectFromString = (definition) => {
 const extractNameFromParent = (parent, prefix, hasColon) => parent.split(hasColon ? ':' : prefix).pop();
 
 const extractExtensionTypeFromDescription = description =>
+    description &&
     taxonomyExtensionTypes.find(type =>
         new RegExp(type).test(description.toLowerCase())
     );
@@ -70,28 +71,37 @@ module.exports.formatRawGaapIdentifiers = (identifiers, extensionType) => {
     return identifiers;
 }
 
-const aggregateTaxonomyExtensions = async (company, extensionObjs) => {
+const createTaxonomyExtensions = async (extensionObjs, company, accessionNumber) => {
     let createdExtensions = [];
     createdExtensions = await reduce(extensionObjs, async (filteredP, extension) => {
         const filtered = await filteredP;
-        const description = extension['$']['edgar:description'];
+        // TODO :: Handle reformatting of file more succinctly
+        //          instead of breaking if it the extension
+        //          doesn't match either format
+        const description = 
+            extension.description || 
+            extension['$'] &&
+            extension['$']['edgar:description'] || 
+            false;
         const extensionType = extractExtensionTypeFromDescription(description);
 
         if (extensionType) {
             extension = {
                 company: company && company._id || null,
                 description,
-                extensionType,
-                sequence: extension['$']['edgar:sequence'],
-                fileName: extension['$']['edgar:file'],
-                fileType: extension['$']['edgar:type'],
-                fileSize: extension['$']['edgar:size'],
-                url: extension['$']['edgar:url'],
-                status: 'unprocessed',
+                extensionType: extensionType || undefined,
+                sequence: extension.sequence || extension['$']['edgar:sequence'],
+                fileName: extension.fileName || extension['$']['edgar:file'],
+                fileType: extension.fileType || extension['$']['edgar:type'],
+                fileSize: extension.fileSize || extension['$']['edgar:size'],
+                url: extension.url || extension['$']['edgar:url'],
+                status: extension.status || 'unprocessed',
             };
 
             const { _id } = await taxonomyExtensions.create(extension);
             filtered.push(_id);
+        } else {
+            errors(`unable to extract extension type from description accessionNumber ${accessionNumber}`)
         }
         return filtered;
     }, []);
@@ -100,7 +110,7 @@ const aggregateTaxonomyExtensions = async (company, extensionObjs) => {
     return createdExtensions;
 }
 
-module.exports.createFilingFromRssItem = async (rawRssItem) => {
+module.exports.scrapeFilingFromRssItem = async (rawRssItem) => {
     const cik = Number(rawRssItem.filing['edgar:cikNumber']);
     const accessionNumber = rawRssItem.filing['edgar:accessionNumber'][0];
 
@@ -109,7 +119,7 @@ module.exports.createFilingFromRssItem = async (rawRssItem) => {
         foundCompany = await getCompanyMetadata(cik);
 
         // TODO :: Stabilize cik to ticker conversion in metadata-service
-        console.log('skipping filing processing until ticker to cik conversion is stable');
+        logs('skipping filing processing until ticker to cik conversion is stable');
         foundCompany = null;
     }
 
@@ -126,18 +136,12 @@ module.exports.createFilingFromRssItem = async (rawRssItem) => {
 
         // Format raw extension files
         let extensions = rawRssItem.filing['edgar:xbrlFiles'][0][['edgar:xbrlFile']];
-        extensions = await aggregateTaxonomyExtensions(foundCompany, extensions);
+        extensions = await createTaxonomyExtensions(extensions, foundCompany, );
 
         // format raw filing data and append
         //  taxonomy extensions to object
         let filing = formatRawFiling(rawRssItem, extensions, foundCompany._id);
-        const newFiling = await filings.create(filing);
-        if (!newFiling) {
-            errors(`unable to process filing company ${foundCompany.name} cik ${cik} accessionNumber ${accessionNumber}`)
-            return false;
-        }
-
-        return newFiling._id;
+        return filing;
     } else {
         errors(`company could not be found cik ${cik}`);
     }
@@ -166,18 +170,15 @@ module.exports.scrapeFilingFromSec = async (rssItem, company) => {
     });
 
     // TODO :: Provide the remaining data from metadata-service
-    // acceptanceDatetime: ,
-    // period: ,
-    // assistantDirector: ,
-    // assignedSic: ,
-    // fiscalYearEnd: ,
+    // acceptanceDatetime:
+    // period:
+    // assistantDirector:
+    // assignedSic:
+    // fiscalYearEnd:
 
-    // taxonomyExtensions: ,
-    const extensions = await this.getFilingextensions(ticker, filing.accessionNumber);
-    // TODO :: Finish taxonomyExtension validation
-    //          and creation for filings fetching
-    //          by specific company
-    // filing.taxonomyExtensions = 
+    const extensions = await this.getFilingMetadata(ticker, filing.accessionNumber);
+    filing.extensions = createTaxonomyExtensions(extensions, company, filing.accessionNumber);
+    return filing;
 }
 
 module.exports.loadCompaniesFromJson = async (path, next) => {

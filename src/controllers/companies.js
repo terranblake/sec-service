@@ -6,13 +6,14 @@ module.exports.validationReducer = async (tickers) => {
     let found = [];
     for (let ticker in tickers) {
         ticker = tickers[ticker];
-        const company = await companies.model.findOne({ ticker });
+        let company = await companies.model.findOne({ ticker });
 
         if (company) {
             found.push(company);
         } else {
             const metadata = await this.getCompanyMetadata(ticker);
-            company = await companies.create(metadata);
+            logs(typeof metadata, metadata);
+            company = await companies.create(JSON.parse(metadata));
 
             if (company && company.ticker === ticker) {
                 found.push(company);

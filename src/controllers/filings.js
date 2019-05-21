@@ -1,11 +1,11 @@
 const { filings } = require('../models');
 const { validationReducer } = require('../controllers/companies');
 const {
-    createFilingFromRssItem,
     download,
     saveExtension,
     processExtension,
-    scrapeFilingFromSec
+    scrapeFilingFromSec,
+    scrapeFilingFromRssItem
 } = require('../utils/raw-data-helpers');
 const gcp = require('../utils/gcp');
 const { fetchLinks } = require('../utils/common-enums');
@@ -28,7 +28,6 @@ module.exports.fetch = async function (source, tickers, type) {
             c['url'] = fetchLinks[source].by_cik(c.ticker, type);
             return c;
         });
-        console.log({ companies })
     }
  
     // process each rss feed
@@ -38,7 +37,7 @@ module.exports.fetch = async function (source, tickers, type) {
         await processRssFeed(parser, company);
     }
 
-    return urls;
+    return companies;
 };
 
 async function processRssFeed(parser, company) {
@@ -48,10 +47,10 @@ async function processRssFeed(parser, company) {
         let item = feed.items[key];
 
         if (item.filing) {
-            console.log('creating filing from rss item');
-            item = await createFilingFromRssItem(item);
+            logs('scraping filing from rss item');
+            item = await scrapeFilingFromRssItem(item);
         } else {
-            console.log('scraping filing from sec');
+            logs('scraping filing from sec');
             item = await scrapeFilingFromSec(item, company);
         }
 
@@ -60,7 +59,8 @@ async function processRssFeed(parser, company) {
         // TODO :: Use config to toggle pubsub
         //          functionality for filing processors
         if (item) {
-            gcp.pubsub.publish('UnprocessedFilings', item);
+            // gcp.pubsub.publish('UnprocessedFilings', item);
+            console.log({ filing: item });
         }
     };
 }
