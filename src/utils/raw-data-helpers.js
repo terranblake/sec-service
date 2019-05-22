@@ -89,7 +89,7 @@ const createTaxonomyExtensions = async (extensionObjs, company, accessionNumber)
             extension = {
                 company: company && company._id || null,
                 description,
-                extensionType: extensionType || undefined,
+                type: extensionType || undefined,
                 sequence: extension.sequence || extension['$']['edgar:sequence'],
                 fileName: extension.fileName || extension['$']['edgar:file'],
                 fileType: extension.fileType || extension['$']['edgar:type'],
@@ -104,10 +104,12 @@ const createTaxonomyExtensions = async (extensionObjs, company, accessionNumber)
             warns(`invalid extension type from description ${description} accessionNumber ${accessionNumber}`)
         }
 
+        // TODO :: Validate that the minimum
+        //          extensions have been retrieved
         return filtered;
     }, []);
 
-    logs(`aggregated ${createdExtensions.length} extensions for company ${company.name} cik ${company.cik} accessionNumber ${accessionNumber}`);
+    logs(`retrieved ${createdExtensions.length} extensions for company ${company.ticker} cik ${company.cik} accessionNumber ${accessionNumber}`);
     return createdExtensions;
 }
 
@@ -118,7 +120,7 @@ module.exports.scrapeFilingFromRssItem = async (rawRssItem) => {
     let foundCompany = await companies.findByCik(cik);
     if (!foundCompany) {
         foundCompany = await getCompanyMetadata(cik);
-        
+
         warns('skipping filing processing until ticker to cik conversion is stable');
         foundCompany = null;
     }
@@ -130,13 +132,13 @@ module.exports.scrapeFilingFromRssItem = async (rawRssItem) => {
         });
 
         if (Array.isArray(foundFiling) && foundFiling.length) {
-            warns(`duplicate filing company ${foundCompany.name} cik ${cik} accessionNumber ${accessionNumber}`);
+            warns(`duplicate filing company ${foundCompany.ticker} cik ${cik} accessionNumber ${accessionNumber}`);
             return;
         }
 
         // Format raw extension files
         let extensions = rawRssItem.filing['edgar:xbrlFiles'][0][['edgar:xbrlFile']];
-        extensions = await createTaxonomyExtensions(extensions, foundCompany, );
+        extensions = await createTaxonomyExtensions(extensions, foundCompany, accessionNumber);
 
         // format raw filing data and append
         //  taxonomy extensions to object
@@ -177,7 +179,7 @@ module.exports.scrapeFilingFromSec = async (rssItem, company) => {
     // fiscalYearEnd:
 
     const extensions = await this.getFilingMetadata(ticker, filing.accessionNumber);
-    filing.extensions = createTaxonomyExtensions(extensions, company, filing.accessionNumber);
+    filing.taxonomyExtensions = await createTaxonomyExtensions(extensions, company, filing.accessionNumber);
     return filing;
 }
 

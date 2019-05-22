@@ -5,14 +5,14 @@ const { dateTypes } = require('../utils/common-enums');
 module.exports.validators = {
     members: (arr) => {
         if (!Array.isArray(arr) || !arr.length) {
-            console.error('members must be an array');
+            errors('members must be an array');
             return false;
         }
 
         for (let member in arr) {
             member = arr[member];
             if (!member.gaapDimension || !member.value) {
-                console.error('member must have gaapDimension and value');
+                errors('member must have gaapDimension and value');
                 return false;
             }
         }

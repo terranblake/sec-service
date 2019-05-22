@@ -9,7 +9,7 @@ const {
 } = require('../utils/raw-data-helpers');
 const gcp = require('../utils/gcp');
 const { fetchLinks } = require('../utils/common-enums');
-const { logs } = require('../utils/logging');
+const { logs, warns, errors } = require('../utils/logging');
 const { rss, taxonomyExtension } = require('../utils/parser-options');
 const config = require('config');
 
@@ -26,21 +26,21 @@ module.exports.fetch = async function (source, tickers, type) {
         companies = await validationReducer(tickers.split(','));
         companies = companies.map(c => {
             c['url'] = fetchLinks[source].by_cik(c.ticker, type);
+            c.source = source;
             return c;
         });
     }
  
-    // process each rss feed
     for (let company in companies) {
         company = companies[company];
-        logs(`processing rss feed from ${source} for ${company.name}`);
-        await processRssFeed(parser, company);
+        logs(`processing rss feed from ${source} for ${company.ticker}`);
+        await getFilingFromSource(parser, company);
     }
 
     return companies;
 };
 
-async function processRssFeed(parser, company) {
+async function getFilingFromSource(parser, company) {
     let feed = await parser.parseURL(company.url);
 
     for (const key in Object.keys(feed.items)) {
@@ -59,8 +59,15 @@ async function processRssFeed(parser, company) {
         // TODO :: Use config to toggle pubsub
         //          functionality for filing processors
         if (item) {
-            // gcp.pubsub.publish('UnprocessedFilings', item);
-            logs(`prepared filing from rss feed ${item.accessionNumber}`);
+            logs(`retrieved filing from ${company.source} rss feed company ${company.ticker} accessionNumber ${item.accessionNumber}`);
+            const filing = await filings.create(item);
+
+            if (filing) {
+                logs(`saved filing ${filing._id} from ${company.source} rss feed company ${company.ticker} accessionNumber ${item.accessionNumber}`);
+                gcp.pubsub.publish('UnprocessedFilings', filing._id);
+            } else {
+                errors(`could not create filing from ${company.source} rss feed company ${company.ticker} accessionNumber ${item.accessionNumber}`);
+            }
         }
     };
 }
@@ -72,18 +79,18 @@ module.exports.parseOne = async function (filing) {
         .populate({ path: 'taxonomyExtensions' })
         .populate({ path: 'company' });
 
-    logs(`parsing filing ${filing} for ${company.name || company._id}`);
+    logs(`parsing filing ${filing} for ${company.ticker || company._id}`);
 
     for (let extension in taxonomyExtensions) {
         extension = taxonomyExtensions[extension];
-        const { url, extensionType } = extension;
+        const { url, type } = extension;
 
         let elements = await download(url, taxonomyExtension, true);
 
         // TODO :: Remove this in favor of check that the
         //          accession number already exists in db
-        saveExtension(extension.extensionType, elements);
-        const facts = processExtension(filing, company._id, extensionType, elements);
+        saveExtension(type, elements);
+        const facts = processExtension(filing, company._id, type, elements);
 
     }
 

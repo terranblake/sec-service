@@ -1,5 +1,6 @@
 const { gaapIdentifiers, facts, contexts } = require('../models');
 const { identifierPrefixes, factCurrencies } = require('../utils/common-enums');
+const { logs, errors, warns } = require('./logging');
 
 module.exports.formatFacts = async (unformattedFacts, extensionType, filing, company) => {
     let expandedFacts = [];
@@ -19,7 +20,7 @@ module.exports.formatFacts = async (unformattedFacts, extensionType, filing, com
                     expandedFacts.push(formatted);
                 });
             } else {
-                console.info(`no identifier found for ${fact} company ${company} filing ${filing}`);
+                logs(`no identifier found for ${fact} company ${company} filing ${filing}`);
             }
         }
     }
@@ -50,7 +51,7 @@ async function expandAndFormatLikeFacts(facts, extensionType, filing, company, g
                 gaapIdentifiers,
                 value,
                 context: res._id,
-            }
+            };
             facts[i] = fact;
         }
     };
@@ -60,7 +61,7 @@ async function expandAndFormatLikeFacts(facts, extensionType, filing, company, g
 
 function normalizeValueWithDecimals(value, decimals, unitRef) {
     if (!factCurrencies.includes(unitRef)) {
-        console.error(`normalizing ${unitRef} is not supported`);
+        errors(`normalizing ${unitRef} is not supported`);
         return value;
     }
 
@@ -68,7 +69,7 @@ function normalizeValueWithDecimals(value, decimals, unitRef) {
     sign = sign === '-' ? '-' : decimals !== 0 ? '+' : '-';
 
     if (decimals && !['+', '-'].includes(sign)) {
-        console.error(`cannot normalize[${value}] without +/- sign[${sign}] in decimals[${decimals}]`);
+        errors(`cannot normalize[${value}] without +/- sign[${sign}] in decimals[${decimals}]`);
         return value;
     }
 
@@ -93,7 +94,7 @@ module.exports.formatContexts = (filing, company, extensionContents) => {
     let formattedContexts = [];
     for (let context in contexts) {
         context = contexts[context];
-        const members = getContextMembers(context["xbrli:entity"][0]["xbrli:segment"]);
+        const members = getContextMembers(filing, company, context["xbrli:entity"][0]["xbrli:segment"]);
         let period = getContextPeriod(context["xbrli:period"][0]);
 
         formattedContexts.push({
@@ -128,13 +129,19 @@ function getContextPeriod(contextPeriod) {
     }
 }
 
-function getContextMembers(members) {
-    if (members) {
-        newMembers = [];
-        members[0]["xbrldi:explicitMember"].forEach((member) => {
-            newMembers.push({ value: member["_"], gaapDimension: member['$'].dimension });
-        });
+function getContextMembers(filing, company, members) {
+    if (members && members[0]) {
+        members = members[0];
 
-        return newMembers;
+        if (members["xbrldi:explicitMember"]) {
+            newMembers = [];
+            members["xbrldi:explicitMember"].forEach((member) => {
+                newMembers.push({ value: member["_"], gaapDimension: member['$'].dimension });
+            });
+
+            return newMembers;
+        } else {
+            warns(`explicit member key does not exist for this context company ${company} filing ${filing}`);
+        }
     }
 }

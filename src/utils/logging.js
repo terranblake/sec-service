@@ -24,6 +24,7 @@ module.exports.logs = function logs(obj) {
     switch (obj.name) {
         default:
             log(
+                (new Date()).toString(),
                 `[server]`.infoPrimary,
                 typeof obj === 'object' ?
                     (`${obj.name}`.infoItem || '', `${obj.message}`.infoPrimary || '') :
@@ -39,6 +40,7 @@ module.exports.warns = function warns(obj) {
     switch (obj.name) {
         default:
             warn(
+                (new Date()).toString(),
                 `[server]`.infoPrimary,
                 typeof obj === 'object' ?
                     (`${obj.name}`.warnItem || '', `${obj.message}`.warnPrimary || '') :
@@ -53,6 +55,7 @@ module.exports.errors = function errors(obj) {
         case 'MongoError':
         case 'ValidationError':
             error(
+                (new Date()).toString(),
                 `[server]`.errorPrimary,
                 `${obj.name}`.errorItem,
                 `${obj.message}`.errorPrimary
@@ -60,6 +63,7 @@ module.exports.errors = function errors(obj) {
             break;
         default:
             error(
+                (new Date()).toString(),
                 `[server]`.errorPrimary,
                 typeof obj === 'object' ?
                     (`${obj.name}`.errorItem || '', `${obj.message}`.errorPrimary || '') :

@@ -7,7 +7,7 @@ const taxonomyExtensionSchema = new Schema({
     ref: 'Company',
     required: true
   },
-  extensionType: {
+  type: {
     type: String,
     enum: require('../utils/common-enums').taxonomyExtensionTypes,
     required: true,
@@ -38,11 +38,6 @@ const taxonomyExtensionSchema = new Schema({
   description: String,
   url: String,
 });
-
-// taxonomyExtensionSchema.index({
-//   company: 1,
-//   extensionType: 1
-// }, { unique: true });
 
 const taxonomyExtensionModel = model('TaxonomyExtension', taxonomyExtensionSchema)
 module.exports.model = taxonomyExtensionModel;

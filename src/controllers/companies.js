@@ -44,7 +44,6 @@ module.exports.getCompanyMetadata = (identifier) => {
 
                 response.on('end', () => {
                     logs(`retrieved metadata for ${identifier}`);
-                    console.log('retrieved metadata for ' + JSON.parse(data).name);
 
                     // check that this company doesn't exist
                     // create new company if it doesn't
