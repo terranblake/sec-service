@@ -33,7 +33,7 @@ module.exports.fetch = async function (source, tickers, type) {
     // process each rss feed
     for (let company in companies) {
         company = companies[company];
-        logs(`processing rss feed at ${company}`);
+        logs(`processing rss feed from ${source} for ${company.name}`);
         await processRssFeed(parser, company);
     }
 
@@ -60,7 +60,7 @@ async function processRssFeed(parser, company) {
         //          functionality for filing processors
         if (item) {
             // gcp.pubsub.publish('UnprocessedFilings', item);
-            console.log({ filing: item });
+            logs(`prepared filing from rss feed ${item.accessionNumber}`);
         }
     };
 }

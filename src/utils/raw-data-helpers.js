@@ -6,7 +6,7 @@ const request = require("request");
 
 const { gaapIdentifiers, companies, filings, taxonomyExtensions, contexts, facts } = require('../models');
 const { taxonomyExtensionTypes } = require('../utils/common-enums');
-const { logs, errors } = require('../utils/logging');
+const { logs, warns, errors } = require('../utils/logging');
 const { formatContexts, formatFacts } = require('./taxonomy-extension-helpers');
 
 const { getCompanyMetadata } = require('../controllers/companies');
@@ -83,8 +83,8 @@ const createTaxonomyExtensions = async (extensionObjs, company, accessionNumber)
             extension['$'] &&
             extension['$']['edgar:description'] || 
             false;
-        const extensionType = extractExtensionTypeFromDescription(description);
 
+        const extensionType = extractExtensionTypeFromDescription(description);
         if (extensionType) {
             extension = {
                 company: company && company._id || null,
@@ -101,12 +101,13 @@ const createTaxonomyExtensions = async (extensionObjs, company, accessionNumber)
             const { _id } = await taxonomyExtensions.create(extension);
             filtered.push(_id);
         } else {
-            errors(`unable to extract extension type from description accessionNumber ${accessionNumber}`)
+            warns(`invalid extension type from description ${description} accessionNumber ${accessionNumber}`)
         }
+
         return filtered;
     }, []);
 
-    logs(`aggregated ${createdExtensions.length} extensions for company ${company.name} cik ${company.cik}`);
+    logs(`aggregated ${createdExtensions.length} extensions for company ${company.name} cik ${company.cik} accessionNumber ${accessionNumber}`);
     return createdExtensions;
 }
 
@@ -117,9 +118,8 @@ module.exports.scrapeFilingFromRssItem = async (rawRssItem) => {
     let foundCompany = await companies.findByCik(cik);
     if (!foundCompany) {
         foundCompany = await getCompanyMetadata(cik);
-
-        // TODO :: Stabilize cik to ticker conversion in metadata-service
-        logs('skipping filing processing until ticker to cik conversion is stable');
+        
+        warns('skipping filing processing until ticker to cik conversion is stable');
         foundCompany = null;
     }
 
@@ -130,7 +130,7 @@ module.exports.scrapeFilingFromRssItem = async (rawRssItem) => {
         });
 
         if (Array.isArray(foundFiling) && foundFiling.length) {
-            logs(`duplicate filing company ${foundCompany.name} cik ${cik} accessionNumber ${accessionNumber}`);
+            warns(`duplicate filing company ${foundCompany.name} cik ${cik} accessionNumber ${accessionNumber}`);
             return;
         }
 
@@ -299,7 +299,6 @@ module.exports.getFilingMetadata = (ticker, accessionNumber) => {
                 response.on('end', () => {
                     logs(`retrieved metadata for ${accessionNumber}`);
                     data = JSON.parse(data);
-                    console.log(`retrieved metadata for ${accessionNumber}`);
                     resolve(data);
                 });
             })
