@@ -13,8 +13,10 @@ module.exports = {
     fetchLinks: {
         'sec': {
             'all': 'https://www.sec.gov/Archives/edgar/xbrlrss.all.xml',
-            'by_cik': (cik=null, type='10-K', count=1000) => `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${cik}&type=${type}&dateb=&owner=exclude&start=0&count=${count}&output=atom`,
+            'by_cik': (cik = null, type = '10-K', count = 1000) => `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${cik}&type=${type}&dateb=&owner=exclude&start=0&count=${count}&output=atom`,
         }
     },
-    factCurrencies: ['USD', 'iso4217_USD', 'iso4217-usd', 'usd', 'U_iso4217USD']
+    factCurrencies: ['USD', 'iso4217_USD', 'iso4217-usd', 'usd', 'U_iso4217USD'],
+    // http://www.xbrl.org/utr/2017-07-12/utr.xml
+    unitTypes: ['monetaryItemType']
 }
