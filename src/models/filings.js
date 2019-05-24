@@ -17,7 +17,7 @@ const filingSchema = new Schema({
     ref: 'Company',
     required: true,
   },
-  filingType: {
+  type: {
     type: String,
     enum: require('../utils/common-enums').filingTypes,
     required: true,

@@ -8,14 +8,14 @@ module.exports.formatFacts = async (unformattedFacts, extensionType, filing, com
     for (let fact in unformattedFacts) {
         // we only want facts we can process
         if (identifierPrefixes.find(p => fact.includes(p))) {
-            noPrefixFact = fact.substr(fact.indexOf(':') + 1);
-            let identifiers = await gaapIdentifiers.model.find({ name: noPrefixFact });
+            gaapIdentifierName = fact.substr(fact.indexOf(':') + 1);
+            let identifiers = await gaapIdentifiers.model.find({ name: gaapIdentifierName });
             identifiers = identifiers.map(i => i._id);
 
             // we only want facts we have a matching identifier for
             if (Array.isArray(identifiers) && identifiers.length) {
                 // console.log({ facts: unformattedFacts[fact], identifiers, fact });
-                const likeFacts = await expandAndFormatLikeFacts(unformattedFacts[fact], extensionType, filing, company, identifiers);
+                const likeFacts = await expandAndFormatLikeFacts(unformattedFacts[fact], extensionType, filing, company, identifiers, gaapIdentifierName);
                 likeFacts && likeFacts.forEach((formatted) => {
                     expandedFacts.push(formatted);
                 });
@@ -28,7 +28,8 @@ module.exports.formatFacts = async (unformattedFacts, extensionType, filing, com
     return expandedFacts;
 }
 
-async function expandAndFormatLikeFacts(facts, extensionType, filing, company, gaapIdentifiers) {
+async function expandAndFormatLikeFacts(facts, extensionType, filing, company, gaapIdentifiers, gaapIdentifierName) {
+    let updatedFacts = [];
     for (let i in facts) {
         fact = facts[i];
 
@@ -39,7 +40,7 @@ async function expandAndFormatLikeFacts(facts, extensionType, filing, company, g
         } = fact['$'];
 
         let value = fact['_'];
-        value = value && normalizeValueWithDecimals(value, decimals, unitRef);
+        value = value && normalizeValueWithDecimals(value, decimals, unitRef, filing);
 
         const query = { filing, company, label: contextRef };
         const res = await contexts.model.findOne(query);
@@ -48,20 +49,25 @@ async function expandAndFormatLikeFacts(facts, extensionType, filing, company, g
                 company,
                 filing,
                 extensionType,
-                gaapIdentifiers,
+                identifiers: {
+                    gaapIdentifierName,
+                    gaapIdentifiers,
+                },
                 value,
                 context: res._id,
             };
-            facts[i] = fact;
+            updatedFacts.push(fact);
+        } else {
+
         }
     };
 
-    return facts;
+    return updatedFacts;
 }
 
-function normalizeValueWithDecimals(value, decimals, unitRef) {
+function normalizeValueWithDecimals(value, decimals, unitRef, filing) {
     if (!factCurrencies.includes(unitRef)) {
-        errors(`normalizing ${unitRef} is not supported`);
+        errors(`normalizing ${unitRef} is not supported filing ${filing}`);
         return value;
     }
 
@@ -144,4 +150,8 @@ function getContextMembers(filing, company, members) {
             warns(`explicit member key does not exist for this context company ${company} filing ${filing}`);
         }
     }
+}
+
+module.exports.formatUnits = (filing, company, extensionContents) => {
+    
 }

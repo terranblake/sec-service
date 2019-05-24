@@ -17,11 +17,14 @@ const factSchema = new Schema({
         enum: require('../utils/common-enums').taxonomyExtensionTypes,
         required: true
     },
-    gaapIdentifiers: [{
-        type: Schema.Types.ObjectId,
-        ref: 'GAAPIdentifier',
-        required: true
-    }],
+    identifiers: {
+        gaapIdentifierName: String,
+        gaapCandidates: [{
+            type: Schema.Types.ObjectId,
+            ref: 'GAAPIdentifier',
+            required: true
+        }],
+    },
     context: {
         type: Schema.Types.ObjectId,
         ref: 'Context',
