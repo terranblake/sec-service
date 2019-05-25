@@ -78,10 +78,10 @@ const createTaxonomyExtensions = async (extensionObjs, company, accessionNumber)
         // TODO :: Handle reformatting of file more succinctly
         //          instead of breaking if it the extension
         //          doesn't match either format
-        const description = 
-            extension.description || 
+        const description =
+            extension.description ||
             extension['$'] &&
-            extension['$']['edgar:description'] || 
+            extension['$']['edgar:description'] ||
             false;
 
         const extensionType = extractExtensionTypeFromDescription(description);
@@ -154,7 +154,7 @@ module.exports.scrapeFilingFromRssItem = async (rawRssItem) => {
 module.exports.scrapeFilingFromSec = async (rssItem, company) => {
     let filing = {}
     const { _id, ticker } = company;
-    
+
     parseString(rssItem.content, (err, result) => {
         result = result.div;
 
@@ -306,4 +306,55 @@ module.exports.getFilingMetadata = (ticker, accessionNumber) => {
             })
             .on('error', (err) => reject(err));
     });
+}
+
+module.exports.parseUnitsUpdate = (units) => {
+    for (let id in units) {
+        unit = units[id];
+
+        unit = {
+            identifier: unit.unitId,
+            name: unit.unitName,
+            type: unit.itemType,
+            nsUnit: unit.nsUnit,
+            nsItemType: unit.nsItemType,
+            symbol: unit.symbol,
+            definition: unit.definition,
+            typeDate: unit.itemTypeDate,
+            versionDate: unit.versionDate,
+            baseStandard: unit.baseStandard
+        };
+
+        units[id] = unit;
+    }
+
+    return units;
+}
+
+module.exports.signum = (decimals) => {
+    let sign = decimals && decimals !== 0 && decimals.slice(0, 1);
+    sign = sign === '-' ? '-' : decimals !== 0 ? '+' : '-';
+
+    return sign;
+}
+
+module.exports.magnitude = (decimals, sign) => {
+    if (decimals && !['+', '-'].includes(sign)) {
+        errors(`cannot normalize[${value}] without +/- sign[${sign}] in decimals[${decimals}]`);
+        return value;
+    }
+
+    places = decimals.slice(1);
+    scalar =
+        sign === '-' ?
+            // postive scalar
+            Math.pow(10, Number(places)) :
+            // stripped decimals isn't 0
+            places !== '' ?
+                // negative scalar
+                Math.pow(10, Number(-1 * places)) :
+                // neutral
+                1;
+
+    return Number(value) * scalar;
 }

@@ -18,5 +18,5 @@ module.exports = {
     },
     factCurrencies: ['USD', 'iso4217_USD', 'iso4217-usd', 'usd', 'U_iso4217USD'],
     // http://www.xbrl.org/utr/2017-07-12/utr.xml
-    unitTypes: ['monetaryItemType']
+    unitTypes: ['monetaryItemType', 'frequencyItemType', 'perUnitItemType', 'pureItemType', 'sharesItemType', 'durationItemType']
 }

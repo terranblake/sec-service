@@ -6,27 +6,25 @@ const unitSchema = new Schema({
     identifier: {
         type: String,
         required: true,
+        lowercase: true
     },
     name: {
         type: String,
         required: true,
+        lowercase: true
     },
     type: {
         type: String,
-        enum: require('../utils/common-enums').unitTypes,
         required: true,
+        lowercase: true
     },
     nsUnit: String,
     nsItemType: String,
     symbol: String,
     definition: String,
-    itemTypeDate: Date,
+    typeDate: Date,
     versionDate: Date,
-    company: {
-        type: Schema.Types.ObjectId,
-        ref: 'Company',
-        required: true
-    }
+    baseStandard: String,
 });
 
 const unitModel = model('Unit', unitSchema)
@@ -34,7 +32,7 @@ module.exports.model = unitModel;
 
 module.exports.createAll = async (items) => {
     items.map(async (item) => {
-        item = await create(item);
+        item = await unitModel.create(item);
     });
 
     return items;

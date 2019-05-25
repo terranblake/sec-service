@@ -1,6 +1,7 @@
 const { gaapIdentifiers, facts, contexts } = require('../models');
 const { identifierPrefixes, factCurrencies } = require('../utils/common-enums');
 const { logs, errors, warns } = require('./logging');
+const { signum, magnitude } = require('../utils/raw-data-helpers');
 
 module.exports.formatFacts = async (unformattedFacts, extensionType, filing, company) => {
     let expandedFacts = [];
@@ -8,6 +9,7 @@ module.exports.formatFacts = async (unformattedFacts, extensionType, filing, com
     for (let fact in unformattedFacts) {
         // we only want facts we can process
         if (identifierPrefixes.find(p => fact.includes(p))) {
+            // console.log({ fact, unformatted: unformattedFacts[fact] });
             gaapIdentifierName = fact.substr(fact.indexOf(':') + 1);
             let identifiers = await gaapIdentifiers.model.find({ name: gaapIdentifierName });
             identifiers = identifiers.map(i => i._id);
@@ -31,67 +33,91 @@ module.exports.formatFacts = async (unformattedFacts, extensionType, filing, com
 async function expandAndFormatLikeFacts(facts, extensionType, filing, company, gaapIdentifiers, gaapIdentifierName) {
     let updatedFacts = [];
     for (let i in facts) {
-        fact = facts[i];
+        let fact = facts[i];
+        // console.log('fact', fact);
+        fact = normalizeFact(fact);
 
-        const {
-            contextRef,
-            unitRef,
-            decimals,
-        } = fact['$'];
+        // const query = { filing, company, label: contextRef };
+        // const res = await contexts.model.findOne(query);
+        // if (res) {
+        //     fact = {
+        //         company,
+        //         filing,
+        //         extensionType,
+        //         identifiers: {
+        //             gaapIdentifierName,
+        //             gaapIdentifiers,
+        //         },
+        //         value,
+        //         context: res._id,
+        //     };
+        //     updatedFacts.push(fact);
+        // } else {
 
-        let value = fact['_'];
-        value = value && normalizeValueWithDecimals(value, decimals, unitRef, filing);
-
-        const query = { filing, company, label: contextRef };
-        const res = await contexts.model.findOne(query);
-        if (res) {
-            fact = {
-                company,
-                filing,
-                extensionType,
-                identifiers: {
-                    gaapIdentifierName,
-                    gaapIdentifiers,
-                },
-                value,
-                context: res._id,
-            };
-            updatedFacts.push(fact);
-        } else {
-
-        }
+        // }
     };
 
     return updatedFacts;
 }
 
-function normalizeValueWithDecimals(value, decimals, unitRef, filing) {
+function normalizeFact(fact) {
+    const {
+        contextRef,
+        unitRef,
+        decimals,
+    } = fact['$'];
+    let value = fact['_'];
+
+    // console.log('fact', fact);
+
+    // Determine the type of fact that this is
+    //  e.g. date, monetary, weight, energy, etc.
+
+    // handler for each type of unit supported (currently only monetaryItemType)
+    //  move the existing numerical handler into separate function
+
     if (!factCurrencies.includes(unitRef)) {
         errors(`normalizing ${unitRef} is not supported filing ${filing}`);
+        console.log('excluded', { fact });
         return value;
     }
 
-    let sign = decimals && decimals !== 0 && decimals.slice(0, 1);
-    sign = sign === '-' ? '-' : decimals !== 0 ? '+' : '-';
+    // convert decimal to signum
+    // decimalsToSignum(decimals)
 
-    if (decimals && !['+', '-'].includes(sign)) {
-        errors(`cannot normalize[${value}] without +/- sign[${sign}] in decimals[${decimals}]`);
-        return value;
-    }
+    // get magnitude from decimals and signum
+    // magnitude(decimals, signum)
 
-    places = decimals.slice(1);
-    scalar =
-        sign === '-' ?
-            // postive scalar
-            Math.pow(10, Number(places)) :
-            // stripped decimals isn't 0
-            places !== '' ?
-                // negative scalar
-                Math.pow(10, Number(-1 * places)) :
-                // neutral
-                1;
 
-    return Number(value) * scalar;
+}
+
+module.exports.formatUnits = (filing, company, extensionContents) => {
+    /*
+
+<unit id="iso4217_USD_per_Right">
+    <divide>
+        <unitNumerator>
+            <measure>iso4217:USD</measure>
+        </unitNumerator>
+        <unitDenominator>
+            <measure>crm:Right</measure>
+        </unitDenominator>
+    </divide>
+</unit>
+
+<unit id="acre">
+    <measure>utr:acre</measure>
+</unit>
+
+<unit id="iso4217_USD">
+    <measure>iso4217:USD</measure>
+</unit>
+
+<unit id="M">
+    <measure>utr:M</measure>
+</unit>
+
+*/
 }
 
 module.exports.formatContexts = (filing, company, extensionContents) => {
@@ -152,6 +178,6 @@ function getContextMembers(filing, company, members) {
     }
 }
 
-module.exports.formatUnits = (filing, company, extensionContents) => {
-    
+function formatUnits(filing, company, extensionContents) {
+
 }

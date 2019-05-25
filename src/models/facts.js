@@ -30,10 +30,6 @@ const factSchema = new Schema({
         ref: 'Context',
         required: false
     },
-    properties: [{
-        property: String,
-        value: String,
-    }],
     value: String,
 });
 
