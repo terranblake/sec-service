@@ -5,4 +5,5 @@ module.exports = {
     taxonomyExtensions: require('./taxonomyextensions'),
     gaapIdentifiers: require('./gaapidentifiers'),
     contexts: require('./contexts'),
+    units: require('./units'),
 };

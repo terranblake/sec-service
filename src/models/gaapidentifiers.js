@@ -1,15 +1,21 @@
 const { model, Schema } = require('mongoose');
 const { errors } = require('../utils/logging');
+const {
+    taxonomyExtensionTypes,
+    identifierDocumentFlags,
+    identifierPrefixes,
+    periodTypes
+} = require('../utils/common-enums');
 
 const gaapIdentifierSchema = new Schema({
     extensionType: {
         type: String,
-        enum: require('../utils/common-enums').taxonomyExtensionTypes,
+        // enum: taxonomyExtensionTypes,
         required: true,
     },
     extendedLinkRole: {
         type: String,
-        required: true,
+        required: false,
     },
     definition: {
         id: {
@@ -18,13 +24,13 @@ const gaapIdentifierSchema = new Schema({
         },
         flag: {
             type: String,
-            enum: require('../utils/common-enums').identifierDocumentFlags,
+            enum: identifierDocumentFlags,
         },
         context: String,
     },
     prefix: {
         type: String,
-        enum: require('../utils/common-enums').identifierPrefixes,
+        enum: identifierPrefixes,
     },
     name: {
         type: String,
@@ -36,7 +42,7 @@ const gaapIdentifierSchema = new Schema({
     },
     depth: {
         type: Number,
-        required: true,
+        required: false,
     },
     order: {
         type: Number,
@@ -44,6 +50,12 @@ const gaapIdentifierSchema = new Schema({
     },
     weight: {
         type: Number,
+        required: false,
+    },
+    // greatly suggested though
+    unitType: {
+        type: Schema.Types.ObjectId,
+        ref: 'Unit',
         required: false,
     },
     parent: {
@@ -54,9 +66,15 @@ const gaapIdentifierSchema = new Schema({
     children: {
         type: [Schema.Types.ObjectId],
         ref: 'GAAPIdentifier',
-        required: true,
-        default: [null]
+        required: false,
     },
+    periodType: {
+        type: String,
+        enum: periodTypes,
+        required: false
+    },
+    abstract: Boolean,
+    documentation: String,
 });
 
 gaapIdentifierSchema.index({
@@ -83,12 +101,21 @@ gaapIdentifierSchema.index({
 const gaapIdentifierModel = model('GAAPIdentifier', gaapIdentifierSchema);
 module.exports.model = gaapIdentifierModel;
 
-module.exports.createAll = async (items) => {
-    return require('../utils/raw-data-helpers')
-        .createGaapTaxonomyTree(
-            items, 
-            this.create
-        );
+module.exports.createAll = async (items, createTree) => {
+    if (createTree) {
+        return require('../utils/raw-data-helpers')
+            .createGaapTaxonomyTree(
+                items,
+                this.create
+            );
+    } else {
+        items.map(async (item) => {
+            item = await gaapIdentifierModel.create(item);
+        });
+
+        return items;
+    }
+
 }
 
 module.exports.create = async (newItem) => {

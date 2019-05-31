@@ -1,4 +1,4 @@
-const { filings } = require('../models');
+const { filings, facts } = require('../models');
 const { validationReducer } = require('../controllers/companies');
 const {
     download,
@@ -90,8 +90,8 @@ module.exports.parseOne = async function (filing) {
         // TODO :: Remove this in favor of check that the
         //          accession number already exists in db
         saveExtension(type, elements);
-        const facts = processExtension(filing, company._id, type, elements);
-
+        const processedFacts = await processExtension(filing, company._id, type, elements);
+        await facts.createAll(processedFacts);
     }
 
     return taxonomyExtensions;

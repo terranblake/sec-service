@@ -7,7 +7,7 @@ module.exports = {
     extensionElementStatuses: ['unprocessed', 'queued', 'processing', 'finished', 'failed'],
     taxonomyExtensionTypes: ['calculation', 'presentation', 'label', 'definition', 'instance', 'schema'],
     filingTypes: ['10-K', '10-Q', '20-F', 'S-1', 'POS AM', 'S-1/A', '485BPOS', '10-K/A', '497', '10-Q/A', '40-F', '8-K', '10-K405'],
-    identifierPrefixes: ['us-gaap', 'srt', 'gaap'],
+    identifierPrefixes: ['us-gaap', 'srt', 'gaap', 'currency', 'stpr', 'exch', 'country', 'dei'],
     identifierDocumentFlags: ['Statement', 'Disclosure'],
     dateTypes: ['instant', 'duration'],
     fetchLinks: {
@@ -18,5 +18,6 @@ module.exports = {
     },
     factCurrencies: ['USD', 'iso4217_USD', 'iso4217-usd', 'usd', 'U_iso4217USD'],
     // http://www.xbrl.org/utr/2017-07-12/utr.xml
-    unitTypes: ['monetaryItemType', 'frequencyItemType', 'perUnitItemType', 'pureItemType', 'sharesItemType', 'durationItemType']
+    unitTypes: ['monetaryItemType', 'durationItemType', 'stringItemType'],
+    periodTypes: ['duration', 'instant'],
 }

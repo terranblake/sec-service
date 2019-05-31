@@ -30,6 +30,11 @@ const factSchema = new Schema({
         ref: 'Context',
         required: false
     },
+    unit: {
+        type: Schema.Types.ObjectId,
+        ref: 'Unit',
+        required: false
+    },
     value: String,
 });
 

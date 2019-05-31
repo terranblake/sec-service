@@ -4,10 +4,10 @@ const { map, reduce } = require('lodash');
 const { parseString } = require('xml2js');
 const request = require("request");
 
-const { gaapIdentifiers, companies, filings, taxonomyExtensions, contexts, facts } = require('../models');
+const { gaapIdentifiers, companies, filings, taxonomyExtensions, contexts, facts, units } = require('../models');
 const { taxonomyExtensionTypes } = require('../utils/common-enums');
 const { logs, warns, errors } = require('../utils/logging');
-const { formatContexts, formatFacts } = require('./taxonomy-extension-helpers');
+const { formatContexts, formatFacts, formatUnits } = require('./taxonomy-extension-helpers');
 
 const { getCompanyMetadata } = require('../controllers/companies');
 
@@ -50,22 +50,59 @@ const extractExtensionTypeFromDescription = description =>
     );
 
 module.exports.formatRawGaapIdentifiers = (identifiers, extensionType) => {
-    identifiers = map(identifiers, (identifier) => {
-        // process all missing or relational data
-        identifier = {
-            extensionType: extensionType.toLowerCase(),
-            extendedLinkRole: identifier['extended link role'],
-            definition: identifier['definition'],
-            prefix: identifier['prefix'],
-            name: identifier['name'],
-            label: identifier['label'],
-            depth: identifier['depth'],
-            order: identifier['order'],
-            weight: identifier['weight'],
-            parent: identifier['parent'],
-        };
+    extensionType = extensionType.toLowerCase();
+    gaapIdentifierSchema = gaapIdentifiers.model.schema.obj;
 
-        return identifier;
+    identifiers = map(identifiers, (identifier) => {
+        // TODO :: Build out processor to handle every sheet
+        //          in the taxonomy declaration documents
+        // Use the following to remove all invalid properties
+        // after switch statement formatters
+        /*
+            for (property in identifier) {
+                if (!Object.keys(gaapIdentifierSchema).includes(property)) {
+                    delete identifier[property]
+                }
+            }
+        */
+
+        switch (extensionType) {
+            // has most of the important identifiers
+            case 'calculation':
+                return {
+                    extensionType,
+                    extendedLinkRole: identifier['extended link role'],
+                    definition: identifier['definition'],
+                    prefix: identifier['prefix'],
+                    name: identifier['name'],
+                    label: identifier['label'],
+                    depth: identifier['depth'],
+                    order: identifier['order'],
+                    weight: identifier['weight'],
+                    parent: identifier['parent'],
+                };
+                break;
+            // in depth definitions and supplementary information
+            //  about each identifier e.g. documentation, type, periodType, etc.
+            case 'elements':
+                unitType = identifier.type && identifier.type.split(':')[1];
+                // identifier.unitType = unitType && unitType.toLowerCase();
+
+                // TODO :: Validate the correct unitType is being found and
+                //          not some random one that we don't need
+
+                identifier.abstract = identifier.abstract === 'true';
+                identifier.extensionType = extensionType;
+
+                for (property in identifier) {
+                    if (!Object.keys(gaapIdentifierSchema).includes(property)) {
+                        delete identifier[property]
+                    }
+                }
+                console.log({ identifier });
+                return identifier;
+                break;
+        }
     })
 
     return identifiers;
@@ -187,7 +224,7 @@ module.exports.loadCompaniesFromJson = async (path, next) => {
     require('fs').readFile(path, (err, res) => next(JSON.parse(res)));
 }
 
-module.exports.loadGaapIdentifiersFromJson = async (path, sheet, next) => {
+module.exports.loadGaapIdentifiersFromSheet = async (path, sheet, next) => {
     return require('./xlsx').parse(path, sheet, next);
 }
 
@@ -255,16 +292,23 @@ module.exports.download = (extensionLink, parsingOptions, parse = true) => {
 module.exports.saveExtension = (type, data) => require('fs').writeFileSync(`./data/test/${type}.json`, JSON.stringify(data));
 
 module.exports.processExtension = async (filingId, companyId, type, elements) => {
-    // this probably won't work for everything
+    // TODO :: this probably won't work for everything
     elements = elements["xbrli:xbrl"] || elements.xbrl;
 
     // don't support other types until
     //  instance parsing is stable
     if (type === 'instance') {
-        let newContexts = formatContexts(filingId, companyId, elements);
+        // format units
+        let rawUnits = elements.unit;
+        validUnits = await formatUnits(rawUnits, filingId, companyId);
+
+        // TODO :: this probably won't work for everything
+        let rawContexts = elements['xbrli:context'] || elements.context;
+        let newContexts = formatContexts(rawContexts, filingId, companyId);
         newContexts = await contexts.createAll(newContexts);
 
-        let newFacts = await formatFacts(elements, type, filingId, companyId);
+        // format facts
+        let newFacts = await formatFacts(elements, validUnits, type, filingId, companyId);
         newFacts = await facts.createAll(newFacts);
         return facts;
     }
@@ -329,32 +373,4 @@ module.exports.parseUnitsUpdate = (units) => {
     }
 
     return units;
-}
-
-module.exports.signum = (decimals) => {
-    let sign = decimals && decimals !== 0 && decimals.slice(0, 1);
-    sign = sign === '-' ? '-' : decimals !== 0 ? '+' : '-';
-
-    return sign;
-}
-
-module.exports.magnitude = (decimals, sign) => {
-    if (decimals && !['+', '-'].includes(sign)) {
-        errors(`cannot normalize[${value}] without +/- sign[${sign}] in decimals[${decimals}]`);
-        return value;
-    }
-
-    places = decimals.slice(1);
-    scalar =
-        sign === '-' ?
-            // postive scalar
-            Math.pow(10, Number(places)) :
-            // stripped decimals isn't 0
-            places !== '' ?
-                // negative scalar
-                Math.pow(10, Number(-1 * places)) :
-                // neutral
-                1;
-
-    return Number(value) * scalar;
 }
