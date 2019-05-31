@@ -10,6 +10,8 @@ module.exports.getFilingsGaapIdentifierCoverage = async (company, filingType) =>
     const uniqueGaapIdentifiers = await gaapIdentifiers.model.find({}, { name: 1, _id: 1 }).distinct('name');
     let companyFilings = await filings.model.find({ company, type: filingType }).populate({ path: 'taxonomyExtensions' });
     companyFilings = companyFilings.filter(f => f.taxonomyExtensions.length > 0);
+
+    console.log(`Filings Total ${companyFilings.length}`);
     
     let filingsIdentifiers = {};
     for (let filing in companyFilings) {
@@ -26,7 +28,7 @@ module.exports.getFilingsGaapIdentifierCoverage = async (company, filingType) =>
         // console.log({ numberFound });
         const result = { [identifier]: (numberFound / companyFilings.length) * 100 };
         if (numberFound !== 0) {
-            console.log(numberFound / Object.keys(filingsIdentifiers).length, identifier, result[identifier]);
+            console.log(`${Math.round(result[identifier]).toString()}%`, identifier);
         }
 
         return result;

@@ -299,7 +299,7 @@ module.exports.processExtension = async (filingId, companyId, type, elements) =>
     //  instance parsing is stable
     if (type === 'instance') {
         // format units
-        let rawUnits = elements.unit;
+        let rawUnits = elements["xbrli:unit"] || elements.unit;;
         validUnits = await formatUnits(rawUnits, filingId, companyId);
 
         // TODO :: this probably won't work for everything

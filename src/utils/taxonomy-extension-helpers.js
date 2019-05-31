@@ -4,8 +4,19 @@ const { logs, errors, warns } = require('./logging');
 const { magnitude, signum } = require('../utils');
 const util = require('util');
 
+const getOverrideUnits = async (unitNames) => await units.model.find({ name: { $in: unitNames } });
+
 module.exports.formatFacts = async (unformattedFacts, units, extensionType, filing, company) => {
     let expandedFacts = [];
+    const overrideUnits = await getOverrideUnits([
+        'USD',
+        'iso4217_USD',
+        'iso4217-usd',
+        'usd',
+        'U_iso4217USD',
+    ]);
+
+    units = units.concat(overrideUnits)
 
     for (let fact in unformattedFacts) {
         // we only want facts we can process
@@ -14,7 +25,6 @@ module.exports.formatFacts = async (unformattedFacts, units, extensionType, fili
             gaapIdentifierName = fact.substr(fact.indexOf(':') + 1);
             let identifiers = await gaapIdentifiers.model.find({ name: gaapIdentifierName });
             identifiers = identifiers.map(i => i._id);
-            console.log(identifiers, Array.isArray(identifiers));
 
             // we only want facts we have a matching identifier for
             if (Array.isArray(identifiers) && identifiers.length) {
@@ -74,7 +84,7 @@ function normalizeFact(fact, filing, company) {
         contextRef,
         unitRef
     } = fact['$'];
-    
+
     value =
         decimals &&
         magnitude(fact['_'], decimals, signum(decimals)) ||
@@ -94,7 +104,11 @@ module.exports.formatUnits = async (extensionUnits, filing, company) => {
     for (let unit in extensionUnits) {
         unit = extensionUnits[unit];
         id = unit.$.id;
-        other = (unit.measure || unit.divide)[0];
+
+        other = unit['xbrli:measure'] ||
+            unit.measure ||
+            unit.divide;
+        other = other && other[0];
 
         const otherType = typeof other;
         if (otherType === 'object') {
@@ -111,10 +125,13 @@ module.exports.formatUnits = async (extensionUnits, filing, company) => {
             continue;
         }
 
+        const unitIdentifiers = supportedUnits.map(s => s.identifier);
+
         // TODO :: Handle this more elegantly. it doesn't account for other iso variants
         //          and only returns a single value
         unitId = unit['$'].id.replace('iso4217_', '').toLowerCase();
-        if (supportedUnits.map(s => s.identifier).includes(unitId) || factCurrencies.includes(unitId)) {
+        console.log(unitId, other, unit);
+        if (unitIdentifiers.includes(unitId) || factCurrencies.includes(other)) {
             logs(`found unit with matching identifier ${unitId}`);
             formattedUnits.push(supportedUnits.find(s => s.identifier === unitId));
         } else {

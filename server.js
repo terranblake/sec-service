@@ -36,8 +36,8 @@ require('./src/utils/gcp/')
         (message) => {
             logs(`received message ${message.id}:`);
             logs(`\tdata: ${message.data}`);
-            logs(`\tattributes: ${util.inspect(message.attributes, { showHidden: true, depth: null })}`);
-            logs(`\tpublished: ${message.publishTime}`);
+            // logs(`\tattributes: ${util.inspect(message.attributes, { showHidden: true, depth: null })}`);
+            // logs(`\tpublished: ${message.publishTime}`);
             parseOne(message.data);
             message.ack();
         },

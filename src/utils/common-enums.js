@@ -16,7 +16,7 @@ module.exports = {
             'by_cik': (cik = null, type = '10-K', count = 1000) => `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${cik}&type=${type}&dateb=&owner=exclude&start=0&count=${count}&output=atom`,
         }
     },
-    factCurrencies: ['USD', 'iso4217_USD', 'iso4217-usd', 'usd', 'U_iso4217USD'],
+    factCurrencies: ['USD', 'iso4217_USD', 'iso4217-usd', 'usd', 'U_iso4217USD', 'iso4217:USD'],
     // http://www.xbrl.org/utr/2017-07-12/utr.xml
     unitTypes: ['monetaryItemType', 'durationItemType', 'stringItemType'],
     periodTypes: ['duration', 'instant'],

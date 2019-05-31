@@ -91,6 +91,7 @@ module.exports.parseOne = async function (filing) {
         //          accession number already exists in db
         saveExtension(type, elements);
         const processedFacts = await processExtension(filing, company._id, type, elements);
+        logs(`about to create ${processedFacts && processedFacts.length} facts from filing ${filing} company ${company._id}`)
         await facts.createAll(processedFacts);
     }
 
