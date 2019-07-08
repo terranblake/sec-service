@@ -304,13 +304,18 @@ module.exports.processExtension = async (filingId, companyId, type, elements) =>
 
         // TODO :: this probably won't work for everything
         let rawContexts = elements['xbrli:context'] || elements.context;
-        let newContexts = formatContexts(rawContexts, filingId, companyId);
-        newContexts = await contexts.createAll(newContexts);
+        let newContexts = await formatContexts(rawContexts, filingId, companyId);
+        for (let context of newContexts) {
+            await contexts.create(context);
+        }
 
         // format facts
         let newFacts = await formatFacts(elements, validUnits, type, filingId, companyId);
-        newFacts = await facts.createAll(newFacts);
-        return facts;
+        for (let fact of newFacts) {
+            await facts.create(fact);
+        }
+
+        return newFacts;
     }
 }
 

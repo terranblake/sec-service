@@ -1,7 +1,7 @@
 const { gaapIdentifier } = require('../models');
 const { seedTree } = require('../controllers/gaapidentifiers');
 const { logs } = require('../utils/logging');
-const { getFilingsGaapIdentifierCoverage } = require('../utils/gaap-identifier-coverage');
+const { getFilingsGaapIdentifierCoverage, getGaapIdentifierCoverage } = require('../utils/gaap-identifier-coverage');
 
 var express = require('express')
 var router = express.Router({ mergeParams: true });
@@ -17,9 +17,17 @@ router
         res.status(400).send('tree has not been grown... please seed and hydrate before picking.');
     })
     .get('/coverage', async (req, res) => {
-        const { company, filingType } = req.body;
+        const { ticker, filingType, threshold, startDate, endDate } = req.body;
+        const { identifiers } = req.query;
 
-        const result = await getFilingsGaapIdentifierCoverage(company, filingType);
+        let result;
+
+        if (identifiers) {
+            result = await getGaapIdentifierCoverage(ticker, filingType, startDate, endDate, identifiers);
+        } else {
+            result = await getFilingsGaapIdentifierCoverage(ticker, filingType, threshold, startDate, endDate);
+        }
+
         res.status(200).send(result);
     })
     .post('/seed', async (req, res) => {

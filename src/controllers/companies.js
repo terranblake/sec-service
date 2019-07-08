@@ -1,24 +1,23 @@
 const { companies } = require('../models');
-const { logs } = require('../utils/logging');
+const { logs, errors } = require('../utils/logging');
 const request = require("request");
 
 module.exports.validationReducer = async (tickers) => {
     let found = [];
-    for (let ticker in tickers) {
-        ticker = tickers[ticker];
+    for (let ticker of tickers) {
+        ticker = ticker.toLowerCase();
         let company = await companies.model.findOne({ ticker });
 
         if (company) {
             found.push(company);
         } else {
             const metadata = await this.getCompanyMetadata(ticker);
-            logs(typeof metadata, metadata);
             company = await companies.create(JSON.parse(metadata));
 
             if (company && company.ticker === ticker) {
                 found.push(company);
             } else {
-
+                errors(`unable to find company with ticker ${ticker}`);
             }
         }
     }

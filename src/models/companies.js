@@ -1,5 +1,5 @@
 const { model, Schema } = require('mongoose');
-const { errors } = require('../utils/logging');
+const { exchanges } = require('../utils/common-enums');
 
 const companySchema = new Schema({
     name: {
@@ -24,7 +24,7 @@ const companySchema = new Schema({
     },
     exchange: {
         type: String,
-        enum: ['nasdaq', 'nyse', 'otc', 'otcbb', 'bats', 'nyse mkt', 'nyse arca', null],
+        enum: exchanges,
         required: false,
         lowercase: true
     },
@@ -41,13 +41,21 @@ companySchema.index({
 const companyModel = model('Company', companySchema);
 module.exports.model = companyModel;
 
+const Crud = require('../utils/crud');
+const crud = new Crud(this.model);
+
+module.exports.get = crud.get;
+module.exports.list = crud.list;
+module.exports.getById = crud.getById;
+
 module.exports.create = async (newItem) => {
+    newItem.ticker = newItem.ticker.trim();
     return await new companyModel(newItem)
         .save()
         .then((createdItem) => {
             return createdItem;
         })
-        .catch(errors);
+        .catch(console.error);
 }
 
 module.exports.deleteAll = async () => {
@@ -56,17 +64,17 @@ module.exports.deleteAll = async () => {
         .then((result) => {
             return result;
         })
-        .catch(errors);
+        .catch(console.error);
 };
 
-module.exports.findById = async (_id) => {
-    return await companyModel
-        .findOne({ _id })
-        .then((res) => {
-            return res;
-        })
-        .catch(errors);
-}
+// module.exports.findById = async (_id) => {
+//     return await companyModel
+//         .findOne({ _id })
+//         .then((res) => {
+//             return res;
+//         })
+//         .catch(console.error);
+// }
 
 module.exports.findByCik = async (cik) => {
     return await companyModel
@@ -74,5 +82,5 @@ module.exports.findByCik = async (cik) => {
         .then((company) => {
             return company;
         })
-        .catch(errors);
+        .catch(console.error);
 }

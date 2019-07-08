@@ -20,4 +20,5 @@ module.exports = {
     // http://www.xbrl.org/utr/2017-07-12/utr.xml
     unitTypes: ['monetaryItemType', 'durationItemType', 'stringItemType'],
     periodTypes: ['duration', 'instant'],
+    exchanges: ['nasdaq', 'nyse', 'otc', 'otcbb', 'bats', 'nyse mkt', 'nyse arca', null],
 }

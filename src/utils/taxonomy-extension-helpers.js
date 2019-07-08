@@ -4,19 +4,20 @@ const { logs, errors, warns } = require('./logging');
 const { magnitude, signum } = require('../utils');
 const util = require('util');
 
-const getOverrideUnits = async (unitNames) => await units.model.find({ name: { $in: unitNames } });
+const getOverrideUnits = async (unitNames) => await units.model.find({ name: { $in: unitNames } }).lean();
 
 module.exports.formatFacts = async (unformattedFacts, units, extensionType, filing, company) => {
     let expandedFacts = [];
     const overrideUnits = await getOverrideUnits([
-        'USD',
-        'iso4217_USD',
-        'iso4217-usd',
         'usd',
-        'U_iso4217USD',
+        'iso4217_usd',
+        'iso4217-usd',
+        'u_iso4217usd',
+        'iso4217:usd',
+        'u_iso4217:usd',
+        'iso4217:USD'
     ]);
-
-    units = units.concat(overrideUnits)
+    units = overrideUnits.concat(units);
 
     for (let fact in unformattedFacts) {
         // we only want facts we can process
@@ -28,51 +29,59 @@ module.exports.formatFacts = async (unformattedFacts, units, extensionType, fili
 
             // we only want facts we have a matching identifier for
             if (Array.isArray(identifiers) && identifiers.length) {
-                // console.log({ facts: unformattedFacts[fact], identifiers, fact });
+
                 const likeFacts = await expandAndFormatLikeFacts(unformattedFacts[fact], units, extensionType, filing, company, identifiers, gaapIdentifierName);
                 likeFacts && likeFacts.forEach((formatted) => {
                     expandedFacts.push(formatted);
                 });
             } else {
-                logs(`no identifier found for ${fact} company ${company} filing ${filing}`);
+                warns(`no identifier found for ${fact} company ${company} filing ${filing}`);
             }
+        } else {
+            warns(`no valid prefix found for fact grouping ${fact}`);
         }
     }
 
     return expandedFacts;
 }
 
-async function expandAndFormatLikeFacts(facts, units, extensionType, filing, company, gaapIdentifiers, gaapIdentifierName) {
+async function expandAndFormatLikeFacts(facts, availableUnits, extensionType, filing, company, gaapIdentifiers, gaapIdentifierName) {
     let updatedFacts = [];
     for (let i in facts) {
-        let fact = facts[i];
-        fact = normalizeFact(fact, filing, company);
-        unit = units.find(u => u.identifier === fact.unitRef);
+        let fact = facts[i], unit;
+        fact = await normalizeFact(fact, filing, company);
+        
+        try {
+            unit = await availableUnits.find(u => u.identifier === fact.unitRef);
+        } catch(err) {
+            throw new Error(err);
+        }
 
         // TODO :: This filter is not enough to guarantee
         //          a unique context per filing. This should
         //          use the filing id for specificity
         const query = { company, label: fact.contextRef };
         const res = await contexts.model.findOne(query);
-        if (unit) {
-            fact = {
-                company,
-                filing,
-                extensionType,
-                identifiers: {
-                    gaapIdentifierName,
-                    gaapIdentifiers,
-                },
-                value: fact.value,
-                context: res && res._id,
-                unit: unit._id
-            };
-            logs(`formatted fact unit ${unit.identifier} gaapIdentifier ${fact.identifiers.gaapIdentifierName} context ${res.label}`);
-            updatedFacts.push(fact);
-        } else {
-            warns(`unable to format fact unit ${unit && unit.identifier} gaapIdentifier ${fact.identifiers && fact.identifiers.gaapIdentifierName} context ${res && res.label}`);
-            console.log(fact);
+
+        fact = {
+            company,
+            filing,
+            extensionType,
+            identifiers: {
+                gaapIdentifierName,
+                gaapIdentifiers,
+            },
+            value: fact.value,
+            context: res && res._id,
+            unit: unit && unit._id
+        };
+
+        if (!fact.filing || !fact.extensionType) {
+            errors(`missing fields for fact identifier ${gaapIdentifierName} type ${extensionType} filing ${filing}`);
         }
+
+        logs(`formatted fact unit ${unit && unit.identifier} gaapIdentifier ${gaapIdentifierName} context ${res && res.label} filing ${filing}`);
+        updatedFacts.push(fact);
     };
 
     return updatedFacts;
@@ -130,7 +139,6 @@ module.exports.formatUnits = async (extensionUnits, filing, company) => {
         // TODO :: Handle this more elegantly. it doesn't account for other iso variants
         //          and only returns a single value
         unitId = unit['$'].id.replace('iso4217_', '').toLowerCase();
-        console.log(unitId, other, unit);
         if (unitIdentifiers.includes(unitId) || factCurrencies.includes(other)) {
             logs(`found unit with matching identifier ${unitId}`);
             formattedUnits.push(supportedUnits.find(s => s.identifier === unitId));
@@ -139,10 +147,10 @@ module.exports.formatUnits = async (extensionUnits, filing, company) => {
         }
     }
 
-    return formattedUnits;
+    return formattedUnits.filter(u => u);
 }
 
-module.exports.formatContexts = (extensionContexts, filing, company) => {
+module.exports.formatContexts = async (extensionContexts, filing, company) => {
     let formattedContexts = [];
     for (let context in extensionContexts) {
         context = extensionContexts[context];
@@ -191,9 +199,9 @@ function getContextMembers(filing, company, members) {
     if (members && members[0]) {
         members = members[0];
 
-        if (members["xbrldi:explicitMember"] || members['_']) {
+        if (members["xbrldi:explicitMember"] || members['_'] || members.explicitMember) {
             newMembers = [];
-            members = members["xbrldi:explicitMember"] || members;
+            members = members["xbrldi:explicitMember"] || members.explicitMember || members;
 
             if (Array.isArray(members)) {
                 members.forEach((member) => {
@@ -205,7 +213,7 @@ function getContextMembers(filing, company, members) {
 
             return newMembers;
         } else {
-            console.log('invalid members', { members });
+            console.log('invalid members', util.inspect({ members }));
             warns(`explicit member key does not exist for this context company ${company} filing ${filing}`);
         }
     }

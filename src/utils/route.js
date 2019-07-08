@@ -46,7 +46,7 @@ function responseBuilder (collectionName, query, entities) {
 
 function queryReducer (model, query) {
     const queryFields = Object.keys(query);
-    let modelFields = Object.keys(model.schema.obj);
+    let modelFields = [...Object.keys(model.schema.obj), '_id'];;
 
     return modelFields.reduce((acc, field) => {
         return queryFields.includes(field) ?

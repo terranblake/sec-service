@@ -2,48 +2,19 @@ const { filings, facts } = require('../models');
 const { validationReducer } = require('../controllers/companies');
 const {
     download,
-    saveExtension,
     processExtension,
     scrapeFilingFromSec,
     scrapeFilingFromRssItem
 } = require('../utils/raw-data-helpers');
 const gcp = require('../utils/gcp');
 const { fetchLinks } = require('../utils/common-enums');
-const { logs, warns, errors } = require('../utils/logging');
+const { logs, errors } = require('../utils/logging');
 const { rss, taxonomyExtension } = require('../utils/parser-options');
-const config = require('config');
 
-// TODO :: Update encrypted config to include this
-// const pubsubEnabled = config.get('google-cloud.pub-sub.enabled');
-module.exports.fetch = async function (source, tickers, type) {
-    let Parser = require('rss-parser');
-    let parser = new Parser(rss);
-
-    let companies = [{ url: fetchLinks.sec.all }];
-
-    // create url for each rss feed
-    if (tickers) {
-        companies = await validationReducer(tickers.split(','));
-        companies = companies.map(c => {
-            c['url'] = fetchLinks[source].by_cik(c.ticker, type);
-            c.source = source;
-            return c;
-        });
-    }
- 
-    for (let company in companies) {
-        company = companies[company];
-        logs(`processing rss feed from ${source} for ${company.ticker}`);
-        await getFilingFromSource(parser, company);
-    }
-
-    return companies;
-};
-
-async function getFilingFromSource(parser, company) {
+const getFilingFromSource = async function (parser, company) {
     let feed = await parser.parseURL(company.url);
 
-    for (const key in Object.keys(feed.items)) {
+    for (let key in feed.items) {
         let item = feed.items[key];
 
         if (item.filing) {
@@ -64,7 +35,8 @@ async function getFilingFromSource(parser, company) {
 
             if (filing) {
                 logs(`saved filing ${filing._id} from ${company.source} rss feed company ${company.ticker} accessionNumber ${item.accessionNumber}`);
-                gcp.pubsub.publish('UnprocessedFilings', filing._id);
+                // gcp.pubsub.publish('UnprocessedFilings', filing._id);
+                await parseOne(filing._id);
             } else {
                 errors(`could not create filing from ${company.source} rss feed company ${company.ticker} accessionNumber ${item.accessionNumber}`);
             }
@@ -72,8 +44,8 @@ async function getFilingFromSource(parser, company) {
     };
 }
 
-module.exports.parseOne = async function (filing) {
-    const { taxonomyExtensions, company } = await filings.model
+const parseOne = async function (filing) {
+    const { taxonomyExtensions, company, _id } = await filings.model
         .findOne({ _id: filing }, { taxonomyExtensions: 1 })
         .lean()
         .populate({ path: 'taxonomyExtensions' })
@@ -86,14 +58,37 @@ module.exports.parseOne = async function (filing) {
         const { url, type } = extension;
 
         let elements = await download(url, taxonomyExtension, true);
-
-        // TODO :: Remove this in favor of check that the
-        //          accession number already exists in db
-        saveExtension(type, elements);
-        const processedFacts = await processExtension(filing, company._id, type, elements);
-        logs(`about to create ${processedFacts && processedFacts.length} facts from filing ${filing} company ${company._id}`)
-        await facts.createAll(processedFacts);
+        const processedFacts = await processExtension(_id, company._id, type, elements);
     }
 
     return taxonomyExtensions;
 }
+
+// TODO :: Update encrypted config to include this
+// const pubsubEnabled = config.get('google-cloud.pub-sub.enabled');
+module.exports.fetch = async function (source, tickers, type) {
+    let Parser = require('rss-parser');
+    let parser = new Parser(rss);
+
+    let companies = [{ url: fetchLinks.sec.all }];
+
+    // create url for each rss feed
+    if (tickers) {
+        companies = await validationReducer(tickers);
+        companies = companies.map(c => {
+            c['url'] = fetchLinks[source].by_cik(c.ticker, type);
+            c.source = source;
+            return c;
+        });
+    }
+
+    for (let company in companies) {
+        company = companies[company];
+        logs(`processing rss feed from ${source} for ${company.ticker}`);
+        await getFilingFromSource(parser, company);
+    }
+
+    return companies;
+};
+
+module.exports.parseOne = parseOne;

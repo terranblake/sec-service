@@ -41,19 +41,23 @@ const factSchema = new Schema({
 const factModel = model('Fact', factSchema);
 module.exports.model = factModel;
 
+const Crud = require('../utils/crud');
+const crud = new Crud(this.model);
+
+module.exports.get = crud.get;
+module.exports.list = crud.list;
+module.exports.getById = crud.getById;
+
 module.exports.create = async (newItem) => {
     return await new factModel(newItem)
         .save()
         .then((item) => {
             return item;
         })
-        .catch(errors);
-}
-
-module.exports.createAll = async (items) => {
-    return items.map(async (item) => {
-        item = await factModel.create(item);
-    });
+        .catch((err) => {
+            logs(`unable to create fact with error ${err}`);
+            throw new Error(err);
+        });
 }
 
 module.exports.deleteAll = async () => {

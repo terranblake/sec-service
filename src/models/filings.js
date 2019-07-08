@@ -47,6 +47,13 @@ const filingSchema = new Schema({
 const filingModel = model('Filing', filingSchema);
 module.exports.model = filingModel;
 
+const Crud = require('../utils/crud');
+const crud = new Crud(this.model);
+
+module.exports.get = crud.get;
+module.exports.list = crud.list;
+module.exports.getById = crud.getById;
+
 module.exports.create = async (newItem) => {
   return await new filingModel(newItem)
     .save()
@@ -56,14 +63,14 @@ module.exports.create = async (newItem) => {
     .catch(errors);
 }
 
-module.exports.get = async (query, projection, paging) => {
-  return await filingModel
-    .find(query, projection, paging)
-    .then((result) => {
-      return result;
-    })
-    .catch(errors);
-}
+// module.exports.get = async (query, projection, paging) => {
+//   return await filingModel
+//     .find(query, projection, paging)
+//     .then((result) => {
+//       return result;
+//     })
+//     .catch(errors);
+// }
 
 module.exports.delete = async (query) => {
   return await filingModel
@@ -83,11 +90,11 @@ module.exports.deleteOne = async (query) => {
     .catch(errors);
 }
 
-module.exports.findOne = async (query, projection, paging) => {
-  return await filingModel
-    .findOne(query, projection, paging)
-    .then((result) => {
-      return result;
-    })
-    .catch(errors);
-}
+// module.exports.findOne = async (query, projection, paging) => {
+//   return await filingModel
+//     .findOne(query, projection, paging)
+//     .then((result) => {
+//       return result;
+//     })
+//     .catch(errors);
+// }
