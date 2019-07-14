@@ -11,10 +11,11 @@ module.exports.validationReducer = async (tickers) => {
         if (company) {
             found.push(company);
         } else {
-            const metadata = await this.getCompanyMetadata(ticker);
-            company = await companies.create(JSON.parse(metadata));
+            let metadata = await this.getCompanyMetadata(ticker);
+            metadata = JSON.parse(metadata);
 
-            if (company && company.ticker === ticker) {
+            if (metadata && metadata.ticker === ticker) {
+                company = await companies.create(metadata);
                 found.push(company);
             } else {
                 errors(`unable to find company with ticker ${ticker}`);

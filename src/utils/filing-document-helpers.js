@@ -1,36 +1,25 @@
-const { gaapIdentifiers, facts, contexts, units } = require('../models');
-const { identifierPrefixes, factCurrencies, unitTypes } = require('../utils/common-enums');
+const { gaapIdentifiers, facts } = require('../models');
+const { identifierPrefixes, factCurrencies, unitTypes } = require('./common-enums');
 const { logs, errors, warns } = require('./logging');
-const { magnitude, signum } = require('../utils');
+const { magnitude, signum } = require('.');
+const supportedUnits = require('./supportedUnits');
 const util = require('util');
 
-const getOverrideUnits = async (unitNames) => await units.model.find({ name: { $in: unitNames } }).lean();
-
-module.exports.formatFacts = async (unformattedFacts, units, extensionType, filing, company) => {
+module.exports.formatFacts = async (unformattedFacts, contexts, units, filing, company) => {
     let expandedFacts = [];
-    const overrideUnits = await getOverrideUnits([
-        'usd',
-        'iso4217_usd',
-        'iso4217-usd',
-        'u_iso4217usd',
-        'iso4217:usd',
-        'u_iso4217:usd',
-        'iso4217:USD'
-    ]);
-    units = overrideUnits.concat(units);
-
+    
     for (let fact in unformattedFacts) {
         // we only want facts we can process
         if (identifierPrefixes.find(p => fact.includes(p))) {
             // console.log({ fact, unformatted: unformattedFacts[fact] });
-            gaapIdentifierName = fact.substr(fact.indexOf(':') + 1);
-            let identifiers = await gaapIdentifiers.model.find({ name: gaapIdentifierName });
+            identifierName = fact.substr(fact.indexOf(':') + 1);
+            let identifiers = await gaapIdentifiers.model.find({ name: identifierName });
             identifiers = identifiers.map(i => i._id);
 
             // we only want facts we have a matching identifier for
             if (Array.isArray(identifiers) && identifiers.length) {
 
-                const likeFacts = await expandAndFormatLikeFacts(unformattedFacts[fact], units, extensionType, filing, company, identifiers, gaapIdentifierName);
+                const likeFacts = await expandAndFormatLikeFacts(unformattedFacts[fact], contexts, units, filing, company, identifiers, identifierName);
                 likeFacts && likeFacts.forEach((formatted) => {
                     expandedFacts.push(formatted);
                 });
@@ -45,58 +34,53 @@ module.exports.formatFacts = async (unformattedFacts, units, extensionType, fili
     return expandedFacts;
 }
 
-async function expandAndFormatLikeFacts(facts, availableUnits, extensionType, filing, company, gaapIdentifiers, gaapIdentifierName) {
+async function expandAndFormatLikeFacts(facts, contexts, units, filing, company, identifiers, identifierName) {
     let updatedFacts = [];
+    
     for (let i in facts) {
         let fact = facts[i], unit;
-        fact = await normalizeFact(fact, filing, company);
-        
-        try {
-            unit = await availableUnits.find(u => u.identifier === fact.unitRef);
-        } catch(err) {
-            throw new Error(err);
-        }
-
-        // TODO :: This filter is not enough to guarantee
-        //          a unique context per filing. This should
-        //          use the filing id for specificity
-        const query = { company, label: fact.contextRef };
-        const res = await contexts.model.findOne(query);
+        fact = await normalizeFact(fact);
+        unit = await units.find(u => u.identifier === fact.unitRef);
+        const context = contexts.find(c =>
+            c.company === company
+            && c.label === fact.contextRef
+        );
 
         fact = {
-            company,
             filing,
-            extensionType,
-            identifiers: {
-                gaapIdentifierName,
-                gaapIdentifiers,
-            },
+            company,
+            identifier: identifiers[0],
+            name: identifierName,
+            date: context.date,
+            itemType: unit.type,
             value: fact.value,
-            context: res && res._id,
-            unit: unit && unit._id
+            // TODO :: Get balance for facts (debit, credit)
+            // balance: context.balance,
+            sign: unit.signum === '+',
         };
 
-        if (!fact.filing || !fact.extensionType) {
-            errors(`missing fields for fact identifier ${gaapIdentifierName} type ${extensionType} filing ${filing}`);
+        if (!fact.filing) {
+            errors(`missing fields for fact identifier ${identifierName} filing ${filing}`);
         }
 
-        logs(`formatted fact unit ${unit && unit.identifier} gaapIdentifier ${gaapIdentifierName} context ${res && res.label} filing ${filing}`);
+        logs(`formatted fact unit ${unit && unit.identifier} identifier ${identifierName} context ${res && res.label} filing ${filing}`);
         updatedFacts.push(fact);
     };
 
     return updatedFacts;
 }
 
-function normalizeFact(fact, filing, company) {
+function normalizeFact(fact) {
     const {
         decimals,
         contextRef,
         unitRef
     } = fact['$'];
 
+    const signum = signum(decimals);
     value =
         decimals &&
-        magnitude(fact['_'], decimals, signum(decimals)) ||
+        magnitude(fact['_'], decimals, signum) ||
         fact['_'];
 
     return {
@@ -104,11 +88,11 @@ function normalizeFact(fact, filing, company) {
         contextRef,
         unitRef: unitRef && unitRef.replace('iso4217_', '').toLowerCase(),
         decimals,
+        signum,
     }
 }
 
 module.exports.formatUnits = async (extensionUnits, filing, company) => {
-    let supportedUnits = await units.model.find({ type: { $in: unitTypes } });
     let formattedUnits = []
     for (let unit in extensionUnits) {
         unit = extensionUnits[unit];
@@ -160,34 +144,34 @@ module.exports.formatContexts = async (extensionContexts, filing, company) => {
 
         members = getContextMembers(filing, company, segment);
 
-        let period = (context["xbrli:period"] || context.period)[0]
-        period = getContextPeriod(period);
+        const period = (context["xbrli:period"] || context.period)[0]
+        let date = getContextDate(period);
 
         formattedContexts.push({
             label: context['$'].id,
             filing,
             company,
             members,
-            period,
+            date,
         });
     }
 
     return formattedContexts;
 }
 
-function getContextPeriod(contextPeriod) {
+function getContextDate(contextPeriod) {
     if (contextPeriod) {
         const dateType =
-            Object.keys(contextPeriod)[0].includes('instant') ?
-                'instant' :
-                'duration';
+            Object.keys(contextPeriod)[0].includes('instant')
+                ? 'cross-sectional'
+                : 'time-series';
 
         return {
-            dateType,
-            [dateType]:
-                dateType === 'instant' ?
-                    (contextPeriod["xbrli:instant"] || contextPeriod.instant)[0] :
-                    {
+            type: dateType,
+            value:
+                dateType === 'instant'
+                    ? (contextPeriod["xbrli:instant"] || contextPeriod.instant)[0]
+                    : {
                         startDate: new Date(contextPeriod["xbrli:startDate"] || contextPeriod.startDate),
                         endDate: new Date(contextPeriod["xbrli:endDate"] || contextPeriod.endDate)
                     }

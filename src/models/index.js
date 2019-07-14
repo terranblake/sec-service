@@ -1,9 +1,10 @@
-module.exports = {
-    filings: require('./filings'),
-    facts: require('./facts'),
-    companies: require('./companies'),
-    taxonomyExtensions: require('./taxonomyextensions'),
-    gaapIdentifiers: require('./gaapidentifiers'),
-    contexts: require('./contexts'),
-    units: require('./units'),
-};
+const { readdir } = require('fs');
+
+module.exports = () => {
+	const models = {};
+	for (let route of readdir('./')) {
+		models[route] = require(`./${route}`);
+	}
+	
+	return models;
+}

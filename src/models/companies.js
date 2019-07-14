@@ -1,5 +1,23 @@
 const { model, Schema } = require('mongoose');
 const { exchanges } = require('../utils/common-enums');
+const { supportedRegulators } = require('../utils/common-enums');
+
+/*
+
+Company
+    * Name
+    * Ticker
+    * ref (sec, regulatory bod)
+    * refId (exchange/regulatory-body unique id, e.g. cik)
+    * refIndustryId (sic for companies reporting to the sec)
+    * fiscalYearEnd
+    * Exchange (nyse, nasdaq)
+    * metadata
+        * State
+        * Country
+        * Address
+
+*/
 
 const companySchema = new Schema({
     name: {
@@ -7,20 +25,29 @@ const companySchema = new Schema({
         required: true,
         lowercase: true
     },
-    sic: {
-        type: String,
-        lowercase: true
-    },
     ticker: {
         type: String,
         required: true,
         lowercase: true
     },
-    cik: {
+    ref: {
+        type: String,
+        enum: Object.keys(supportedRegulators),
+        required: true,
+    },
+    refId: {
         type: String,
         required: true,
-        unique: true,
-        lowercase: true
+    },
+    refIndustryId: {
+        type: String,
+        required: true,
+    },
+    fiscalYearEnd: {
+        type: Date,
+        // TODO :: Add fiscalYearEnd to
+        //          metadata-service capabilities
+        required: false,
     },
     exchange: {
         type: String,
@@ -29,6 +56,7 @@ const companySchema = new Schema({
         lowercase: true
     },
     state: String,
+    country: String,
     address: String,
 });
 

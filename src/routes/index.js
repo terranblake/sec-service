@@ -1,9 +1,9 @@
 const router = require('express').Router({ mergeParams: true });
+const { readdirSync } = require('fs');
+const fileName = __filename.split('/').pop();
 
-router.use('/filings', require('./filing'));
-router.use('/companies', require('./company'));
-router.use('/gaapidentifiers', require('./gaapidentifier'));
-router.use('/units', require('./unit'));
-router.use('/admin', require('./admin'));
+for (let route of readdirSync('./src/routes/').filter(f => f.includes('.js') && f !== fileName)) {
+	router.use(`/${route}`, require(`./${route}`));
+}
 
 module.exports = router;

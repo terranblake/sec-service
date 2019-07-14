@@ -1,5 +1,25 @@
 const { model, Schema } = require('mongoose');
 const { errors } = require('../utils/logging');
+const { dateTypes, itemTypes } = require('../utils/common-enums');
+
+/*
+
+Fact
+    * Filing (ref: Filing)
+    * Company (ref: Company)
+    * Identifier (ref: Identifier)
+    * Name
+    * Label
+    * Date
+        * Type (point, range) - use moment for point / moment-range for range
+        * Value (string/object)
+    * itemType (previously unitType)
+    * Metadata
+        * Balance (credit, debit)
+        * sign
+    * Value
+
+*/
 
 const factSchema = new Schema({
     filing: {
@@ -12,29 +32,35 @@ const factSchema = new Schema({
         ref: 'Company',
         required: true
     },
-    extensionType: {
+    identifier: {
+        type: Schema.Types.ObjectId,
+        ref: 'Identifier',
+        required: true,
+    },
+    name: {
         type: String,
-        enum: require('../utils/common-enums').taxonomyExtensionTypes,
-        required: true
+        required: true,
     },
-    identifiers: {
-        gaapIdentifierName: String,
-        gaapCandidates: [{
-            type: Schema.Types.ObjectId,
-            ref: 'GAAPIdentifier',
-            required: true
-        }],
+    label: {
+        type: String,
+        required: true,
     },
-    context: {
-        type: Schema.Types.ObjectId,
-        ref: 'Context',
-        required: false
+    date: {
+        type: {
+            enum: dateTypes,
+            required: true,
+        },
+        value: {
+            type: Schema.Types.Mixed,
+            required: true,
+        },
     },
-    unit: {
-        type: Schema.Types.ObjectId,
-        ref: 'Unit',
-        required: false
+    itemType: {
+        enum: itemTypes,
+        required: true,
     },
+    balance: String,
+    sign: Boolean,
     value: String,
 });
 

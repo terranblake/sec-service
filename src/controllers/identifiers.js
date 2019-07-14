@@ -1,5 +1,5 @@
-const { loadGaapIdentifiersFromSheet, formatRawGaapIdentifiers } = require('../utils/raw-data-helpers');
-const { gaapIdentifiers } = require('../models');
+const { loadIdentifiersFromSheet, formatRawIdentifiers } = require('../utils/raw-data-helpers');
+const { Identifiers } = require('../models');
 const { taxonomyExtensionTypes } = require('../utils/common-enums');
 
 const { each } = require('lodash');
@@ -9,19 +9,19 @@ module.exports.seedTree = async (path, extensionType) => {
     const isValid = isValidType(extensionType);
 
     if (extensionType) {
-        let identifiers = await loadGaapIdentifiersFromSheet(path, extensionType);
-        identifiers = await formatRawGaapIdentifiers(identifiers, extensionType);
+        let identifiers = await loadIdentifiersFromSheet(path, extensionType);
+        identifiers = await formatRawIdentifiers(identifiers, extensionType);
 
-        await gaapIdentifiers.createAll(identifiers, isValid);
+        await Identifiers.createAll(identifiers, isValid);
         result[extensionType] = identifiers;
     } else {
         const { taxonomyExtensionTypes } = require('../utils/common-enums');
 
         await each(taxonomyExtensionTypes, async (extensionType) => {
-            let identifiers = loadGaapIdentifiersFromSheet(path, extensionType);
-            identifiers = formatRawGaapIdentifiers(identifiers, extensionType);
+            let identifiers = loadIdentifiersFromSheet(path, extensionType);
+            identifiers = formatRawIdentifiers(identifiers, extensionType);
 
-            await gaapIdentifiers.createAll(identifiers);
+            await Identifiers.createAll(identifiers);
             result[extensionType] = identifiers;
         });
     }

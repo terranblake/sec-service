@@ -1,7 +1,29 @@
 const { model, Schema } = require('mongoose');
 const { errors } = require('../utils/logging');
 
-const taxonomyExtensionSchema = new Schema({
+/*
+
+FilingDocument
+  * Filing (ref: Filing)
+  * Company (ref: Company)
+  * Type (instance, label, definition)
+  * Status (unprocessed, processing, processed)
+  * Metadata
+    * sequenceNumber
+    * Name
+    * xbrlFormType
+    * Size
+    * Description
+    * Url
+
+*/
+
+const filingDocumentSchema = new Schema({
+  filing: {
+    type: Schema.Types.ObjectId,
+    ref: 'Filing',
+    required: true,
+  },
   company: {
     type: Schema.Types.ObjectId,
     ref: 'Company',
@@ -9,7 +31,7 @@ const taxonomyExtensionSchema = new Schema({
   },
   type: {
     type: String,
-    enum: require('../utils/common-enums').taxonomyExtensionTypes,
+    enum: require('../utils/common-enums').filingDocumentTypes,
     required: true,
   },
   status: {
@@ -17,30 +39,16 @@ const taxonomyExtensionSchema = new Schema({
     enum: require('../utils/common-enums').extensionElementStatuses,
     required: true,
   },
-  facts: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Fact',
-    required: false,
-  }],
-  contexts: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Context',
-    required: false
-  }],
-  units: [{
-    type: Object,
-    required: false
-  }],
-  sequence: String,
+  sequenceNumber: String,
   fileName: String,
   fileType: String,
   fileSize: String,
-  description: String,
-  url: String,
+  fileDescription: String,
+  fileUrl: String,
 });
 
-const taxonomyExtensionModel = model('TaxonomyExtension', taxonomyExtensionSchema)
-module.exports.model = taxonomyExtensionModel;
+const filingDocumentModel = model('FilingDocument', filingDocumentSchema)
+module.exports.model = filingDocumentModel;
 
 module.exports.createAll = async (items) => {
   items.map(async (item) => {
@@ -50,11 +58,8 @@ module.exports.createAll = async (items) => {
   return items;
 }
 
-// TODO :: Listen for taxonomy-extension creation events
-//              when created, query and process each element
-//              in the original file
 module.exports.create = async (item) => {
-  return await new taxonomyExtensionModel(item)
+  return await new filingDocumentModel(item)
     .save()
     .then((res) => {
       return res;
@@ -63,7 +68,7 @@ module.exports.create = async (item) => {
 }
 
 module.exports.deleteAll = async () => {
-  return await taxonomyExtensionModel
+  return await filingDocumentModel
     .deleteMany()
     .then((res) => {
       return res;

@@ -1,17 +1,45 @@
 const { model, Schema } = require('mongoose');
 const { errors } = require('../utils/logging');
 const {
-    taxonomyExtensionTypes,
+    filingDocumentTypes,
     identifierDocumentFlags,
     identifierPrefixes,
-    periodTypes
+    periodTypes,
+    itemTypes
 } = require('../utils/common-enums');
 
-const gaapIdentifierSchema = new Schema({
-    extensionType: {
+/*
+
+Identifier
+    * documentType
+    * Definition
+        * Id
+        * Flag
+        * Context
+    * Prefix
+    * Name
+    * Label
+    * Depth
+    * Order
+    * Weight
+    * itemType (textItemType, monetaryItemType)
+    * Parent
+    * periodType
+    * Abstract
+    * Documentation
+
+*/
+
+const identifierSchema = new Schema({
+    documentType: {
         type: String,
-        // enum: taxonomyExtensionTypes,
+        enum: filingDocumentTypes,
         required: true,
+    },
+    itemType: {
+        type: String,
+        enum: itemTypes,
+        required: true
     },
     extendedLinkRole: {
         type: String,
@@ -20,7 +48,6 @@ const gaapIdentifierSchema = new Schema({
     definition: {
         id: {
             type: String,
-            default: null,
         },
         flag: {
             type: String,
@@ -52,22 +79,16 @@ const gaapIdentifierSchema = new Schema({
         type: Number,
         required: false,
     },
-    // greatly suggested though
-    unitType: {
-        type: Schema.Types.ObjectId,
-        ref: 'Unit',
-        required: false,
-    },
     parent: {
         type: Schema.Types.ObjectId,
-        ref: 'GAAPIdentifier',
+        ref: 'Identifier',
         required: false,
     },
-    children: {
-        type: [Schema.Types.ObjectId],
-        ref: 'GAAPIdentifier',
-        required: false,
-    },
+    // children: {
+    //     type: [Schema.Types.ObjectId],
+    //     ref: 'Identifier',
+    //     required: false,
+    // },
     periodType: {
         type: String,
         enum: periodTypes,
@@ -77,40 +98,34 @@ const gaapIdentifierSchema = new Schema({
     documentation: String,
 });
 
-gaapIdentifierSchema.index({
+identifierSchema.index({
     name: 1
 });
 
-gaapIdentifierSchema.index({
+identifierSchema.index({
     parent: 1,
     depth: 1,
 });
 
-gaapIdentifierSchema.index({
-    parent: 1,
-    depth: 1,
-    children: 1
-});
-
-gaapIdentifierSchema.index({
+identifierSchema.index({
     depth: 1,
     name: 1,
     'description.id': 1,
 });
 
-const gaapIdentifierModel = model('GAAPIdentifier', gaapIdentifierSchema);
-module.exports.model = gaapIdentifierModel;
+const identifierModel = model('Identifier', identifierSchema);
+module.exports.model = identifierModel;
 
 module.exports.createAll = async (items, createTree) => {
     if (createTree) {
         return require('../utils/raw-data-helpers')
-            .createGaapTaxonomyTree(
+            .createTaxonomyTree(
                 items,
                 this.create
             );
     } else {
         items.map(async (item) => {
-            item = await gaapIdentifierModel.create(item);
+            item = await identifierModel.create(item);
         });
 
         return items;
@@ -119,7 +134,7 @@ module.exports.createAll = async (items, createTree) => {
 }
 
 module.exports.create = async (newItem) => {
-    return await new gaapIdentifierModel(newItem)
+    return await new identifierModel(newItem)
         .save()
         .then((createdItem) => {
             return createdItem;
@@ -128,7 +143,7 @@ module.exports.create = async (newItem) => {
 }
 
 module.exports.findByDepth = async (depth) => {
-    return await gaapIdentifierModel
+    return await identifierModel
         .find({ depth })
         .then((res) => {
             return res;
@@ -138,7 +153,7 @@ module.exports.findByDepth = async (depth) => {
 
 module.exports.findParentIdentifier = async (identifier) => {
     const { depth, parent, definition } = identifier;
-    return await gaapIdentifierModel
+    return await identifierModel
         .findOne({ depth: depth - 1, name: parent, 'definition.id': definition.id }, { _id: 1 })
         .then((identifier) => {
             if (identifier) {

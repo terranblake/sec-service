@@ -4,33 +4,29 @@ const { map, reduce } = require('lodash');
 const { parseString } = require('xml2js');
 const request = require("request");
 
-const { gaapIdentifiers, companies, filings, taxonomyExtensions, contexts, facts, units } = require('../models');
-const { taxonomyExtensionTypes } = require('../utils/common-enums');
+const { identifiers, companies, filings: Filings } = require('../models');
+const { filingDocumentTypes } = require('../utils/common-enums');
 const { logs, warns, errors } = require('../utils/logging');
-const { formatContexts, formatFacts, formatUnits } = require('./taxonomy-extension-helpers');
 
 const { getCompanyMetadata } = require('../controllers/companies');
 
-const formatRawFiling = (filingObj, taxonomyExtensions, company) => {
-    return {
-        source: 'sec',
-        sourceLink: filingObj.link,
-        publishTitle: filingObj.title,
-        publishedAt: moment(filingObj.pubDate, 'dddd, DD'),
+module.exports.formatFilingBySource = (source, filingObj, company) => ({
+    'sec': {
+        source,
+        company,
         type: filingObj.filing['edgar:formType'][0],
-        filingDate: moment(filingObj.filing['edgar:filingDate'], 'MM/DD/YYYY'),
+        refId: filingObj.filing['edgar:accessionNumber'][0],
+        period: moment(filingObj.filing['edgar:period'], 'YYYYMMDD').format(),
+        fiscalYearEnd: filingObj.filing['edgar:fiscalYearEnd'] && moment(filingObj.filing['edgar:fiscalYearEnd'], 'MMDD').format() || null,
+        url: filingObj.link,
+        name: filingObj.title,
+        publishedAt: moment(filingObj.pubDate, 'dddd, DD').format(),
+        filedAt: moment(filingObj.filing['edgar:filingDate'], 'MM/DD/YYYY').format(),
+        acceptedAt: moment(filingObj.filing['edgar:acceptanceDatetime'], 'YYYYMMDDHHmm').format(),
         accessionNumber: filingObj.filing['edgar:accessionNumber'][0],
         fileNumber: filingObj.filing['edgar:fileNumber'][0],
-        acceptanceDatetime: moment(filingObj.filing['edgar:acceptanceDatetime'], 'YYYYMMDDHHmm'),
-        period: moment(filingObj.filing['edgar:period'], 'YYYYMMDD'),
-        assistantDirector:
-            filingObj.filing['edgar:assistantDirector'] && filingObj.filing['edgar:assistantDirector'][0] || null,
-        assignedSic: filingObj.filing['edgar:assignedSic'] && filingObj.filing['edgar:assignedSic'][0] || null,
-        fiscalYearEnd: filingObj.filing['edgar:fiscalYearEnd'] && moment(filingObj.filing['edgar:fiscalYearEnd'], 'MMDD') || null,
-        taxonomyExtensions,
-        company
-    };
-}
+    }
+}[source]);
 
 const extractDefitionObjectFromString = (definition) => {
     definition = definition.split('-');
@@ -43,15 +39,15 @@ const extractDefitionObjectFromString = (definition) => {
 
 const extractNameFromParent = (parent, prefix, hasColon) => parent.split(hasColon ? ':' : prefix).pop();
 
-const extractExtensionTypeFromDescription = description =>
+const extractDocumentTypeFromDescription = description =>
     description &&
-    taxonomyExtensionTypes.find(type =>
+    filingDocumentTypes.find(type =>
         new RegExp(type).test(description.toLowerCase())
     );
 
-module.exports.formatRawGaapIdentifiers = (identifiers, extensionType) => {
+module.exports.formatRawIdentifiers = (identifiers, extensionType) => {
     extensionType = extensionType.toLowerCase();
-    gaapIdentifierSchema = gaapIdentifiers.model.schema.obj;
+    identifierSchema = identifiers.model.schema.obj;
 
     identifiers = map(identifiers, (identifier) => {
         // TODO :: Build out processor to handle every sheet
@@ -60,7 +56,7 @@ module.exports.formatRawGaapIdentifiers = (identifiers, extensionType) => {
         // after switch statement formatters
         /*
             for (property in identifier) {
-                if (!Object.keys(gaapIdentifierSchema).includes(property)) {
+                if (!Object.keys(identifierSchema).includes(property)) {
                     delete identifier[property]
                 }
             }
@@ -95,7 +91,7 @@ module.exports.formatRawGaapIdentifiers = (identifiers, extensionType) => {
                 identifier.extensionType = extensionType;
 
                 for (property in identifier) {
-                    if (!Object.keys(gaapIdentifierSchema).includes(property)) {
+                    if (!Object.keys(identifierSchema).includes(property)) {
                         delete identifier[property]
                     }
                 }
@@ -108,115 +104,98 @@ module.exports.formatRawGaapIdentifiers = (identifiers, extensionType) => {
     return identifiers;
 }
 
-const createTaxonomyExtensions = async (extensionObjs, company, accessionNumber) => {
-    let createdExtensions = [];
-    createdExtensions = await reduce(extensionObjs, async (filteredP, extension) => {
+module.exports.formatFilingDocuments = async (filingsDocuments, company, filing) => {
+    const { refId, _id } = filing;
+
+    let formattedDocuments = await reduce(filingsDocuments, async (filteredP, document) => {
         const filtered = await filteredP;
-        // TODO :: Handle reformatting of file more succinctly
-        //          instead of breaking if it the extension
-        //          doesn't match either format
+
         const description =
-            extension.description ||
-            extension['$'] &&
-            extension['$']['edgar:description'] ||
+            document.description ||
+            document['$'] &&
+            document['$']['edgar:description'] ||
             false;
 
-        const extensionType = extractExtensionTypeFromDescription(description);
-        if (extensionType) {
-            extension = {
-                company: company && company._id || null,
-                description,
-                type: extensionType || undefined,
-                sequence: extension.sequence || extension['$']['edgar:sequence'],
-                fileName: extension.fileName || extension['$']['edgar:file'],
-                fileType: extension.fileType || extension['$']['edgar:type'],
-                fileSize: extension.fileSize || extension['$']['edgar:size'],
-                url: extension.url || extension['$']['edgar:url'],
-                status: extension.status || 'unprocessed',
+        const docuumentType = extractDocumentTypeFromDescription(description);
+        if (docuumentType) {
+            document = {
+                filing: _id,
+                company: company._id,
+                type: docuumentType || undefined,
+                status: 'unprocessed',
+                sequenceNumber: document.sequence || document['$']['edgar:sequence'],
+                fileName: document.fileName || document['$']['edgar:file'],
+                fileType: document.fileType || document['$']['edgar:type'],
+                fileSize: document.fileSize || document['$']['edgar:size'],
+                fileDescription: description,
+                fileUrl: document.url || document['$']['edgar:url'],
             };
 
-            const { _id } = await taxonomyExtensions.create(extension);
             filtered.push(_id);
         } else {
-            warns(`invalid extension type from description ${description} accessionNumber ${accessionNumber}`)
+            warns(`invalid document type from description ${description} refId ${refId}`)
         }
 
         // TODO :: Validate that the minimum
-        //          extensions have been retrieved
+        //          documents have been retrieved
         return filtered;
     }, []);
 
-    logs(`retrieved ${createdExtensions.length} extensions for company ${company.ticker} cik ${company.cik} accessionNumber ${accessionNumber}`);
-    return createdExtensions;
+    logs(`retrieved ${formattedDocuments.length} documents for company ${company.ticker} cik ${company.cik} refId ${refId}`);
+    return formattedDocuments;
 }
 
-module.exports.scrapeFilingFromRssItem = async (rawRssItem) => {
+module.exports.scrapeFilingFromRssItem = async (source, rawRssItem) => {
     const cik = Number(rawRssItem.filing['edgar:cikNumber']);
     const accessionNumber = rawRssItem.filing['edgar:accessionNumber'][0];
 
     let foundCompany = await companies.findByCik(cik);
     if (!foundCompany) {
         foundCompany = await getCompanyMetadata(cik);
-
         warns('skipping filing processing until ticker to cik conversion is stable');
-        foundCompany = null;
+        return false;
     }
 
-    if (foundCompany) {
-        const foundFiling = await filings.get({
-            company: foundCompany && foundCompany._id || null,
-            accessionNumber
-        });
+    const foundFiling = await Filings.get({
+        company: foundCompany && foundCompany._id || null,
+        accessionNumber
+    });
 
-        if (Array.isArray(foundFiling) && foundFiling.length) {
-            warns(`duplicate filing company ${foundCompany.ticker} cik ${cik} accessionNumber ${accessionNumber}`);
-            return;
-        }
-
-        // Format raw extension files
-        let extensions = rawRssItem.filing['edgar:xbrlFiles'][0][['edgar:xbrlFile']];
-        extensions = await createTaxonomyExtensions(extensions, foundCompany, accessionNumber);
-
-        // format raw filing data and append
-        //  taxonomy extensions to object
-        let filing = formatRawFiling(rawRssItem, extensions, foundCompany._id);
-        return filing;
-    } else {
-        errors(`company could not be found cik ${cik}`);
+    if (Array.isArray(foundFiling) && foundFiling.length) {
+        warns(`duplicate filing company ${foundCompany.ticker} cik ${cik} accessionNumber ${accessionNumber}. bailing!`);
+        return false;
     }
 
-    return false;
+    let filing = this.formatFilingBySource[source](rawRssItem, foundCompany._id);
+    return filing;
 }
 
 module.exports.scrapeFilingFromSec = async (rssItem, company) => {
     let filing = {}
-    const { _id, ticker } = company;
 
     parseString(rssItem.content, (err, result) => {
-        result = result.div;
+        if (err) {
+            console.error(`there was a problem parsing rss item for company ${company._id}`);
+        }
 
+        result = result.div;
         filing = {
-            company: _id,
             source: 'sec',
-            sourceLink: rssItem.link,
-            publishTitle: rssItem.title,
-            publishedAt: rssItem.pubDate,
+            company: company._id,
             type: result['filing-type'][0],
-            filingDate: result['filing-date'][0],
+            refId: result['accession-nunber'][0],
+            // TODO :: Define the period for filing scraped
+            //          using python
+            // period:
+            url: rssItem.link,
+            name: rssItem.title,
+            publishedAt: rssItem.pubDate,
+            filedAt: result['filing-date'][0],
             accessionNumber: result['accession-nunber'][0],
             fileNumber: result['file-number'][0],
         }
     });
 
-    // TODO :: Provide the remaining data from metadata-service
-    // acceptanceDatetime:
-    // period:
-    // assistantDirector:
-    // assignedSic:
-    // fiscalYearEnd:
-
-    const extensions = await this.getFilingMetadata(ticker, filing.accessionNumber);
-    filing.taxonomyExtensions = await createTaxonomyExtensions(extensions, company, filing.accessionNumber);
     return filing;
 }
 
@@ -224,7 +203,7 @@ module.exports.loadCompaniesFromJson = async (path, next) => {
     require('fs').readFile(path, (err, res) => next(JSON.parse(res)));
 }
 
-module.exports.loadGaapIdentifiersFromSheet = async (path, sheet, next) => {
+module.exports.loadidentifiersFromSheet = async (path, sheet, next) => {
     return require('./xlsx').parse(path, sheet, next);
 }
 
@@ -245,13 +224,13 @@ module.exports.createGaapTaxonomyTree = async (tree) => {
         if (leaf.depth != 0) {
             leaf.definition = extractDefitionObjectFromString(leaf.definition);
             leaf.parent = extractNameFromParent(leaf.parent, leaf.prefix, true);
-            leaf.parent = await gaapIdentifiers.findParentIdentifier(leaf);
+            leaf.parent = await identifiers.findParentIdentifier(leaf);
             leaf.parent && logs(`found parent identifier for ${leaf.name} depth ${leaf.depth - 1} parent ${leaf.parent}`);
         } else {
             logs(`top-level element ${leaf.name} depth ${leaf.depth - 1}`);
         }
 
-        await gaapIdentifiers.create(leaf);
+        await identifiers.create(leaf);
     };
 
     logs('finished creating gaap taxonomy tree');
@@ -291,34 +270,6 @@ module.exports.download = (extensionLink, parsingOptions, parse = true) => {
 
 module.exports.saveExtension = (type, data) => require('fs').writeFileSync(`./data/test/${type}.json`, JSON.stringify(data));
 
-module.exports.processExtension = async (filingId, companyId, type, elements) => {
-    // TODO :: this probably won't work for everything
-    elements = elements["xbrli:xbrl"] || elements.xbrl;
-
-    // don't support other types until
-    //  instance parsing is stable
-    if (type === 'instance') {
-        // format units
-        let rawUnits = elements["xbrli:unit"] || elements.unit;;
-        validUnits = await formatUnits(rawUnits, filingId, companyId);
-
-        // TODO :: this probably won't work for everything
-        let rawContexts = elements['xbrli:context'] || elements.context;
-        let newContexts = await formatContexts(rawContexts, filingId, companyId);
-        for (let context of newContexts) {
-            await contexts.create(context);
-        }
-
-        // format facts
-        let newFacts = await formatFacts(elements, validUnits, type, filingId, companyId);
-        for (let fact of newFacts) {
-            await facts.create(fact);
-        }
-
-        return newFacts;
-    }
-}
-
 const sortTree = (tree) => {
     logs('started sorting tree');
     return tree.sort(function (a, b) {
@@ -328,32 +279,6 @@ const sortTree = (tree) => {
         if (depthA > depthB)
             return 1;
         return 0;
-    });
-}
-
-module.exports.getFilingMetadata = (ticker, accessionNumber) => {
-    const config = require('config');
-    // TODO :: Add metadata-service to encrypted config
-    const metadataService = config.has('metadata-service.base') || 'http://localhost:5000';
-    const endpoint = `${metadataService}/filings?ticker=${ticker}&accessionNumber=${accessionNumber}`;
-
-    return new Promise((resolve, reject) => {
-        let data = "";
-        request
-            .get(endpoint)
-            .on('response', (response) => {
-                logs(`retrieving metadata for ${accessionNumber}`);
-                response.on('data', (chunk) => {
-                    data += chunk;
-                });
-
-                response.on('end', () => {
-                    logs(`retrieved metadata for ${accessionNumber}`);
-                    data = JSON.parse(data);
-                    resolve(data);
-                });
-            })
-            .on('error', (err) => reject(err));
     });
 }
 

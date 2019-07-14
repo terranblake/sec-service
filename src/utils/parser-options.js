@@ -5,7 +5,7 @@ module.exports = {
             item: [['edgar:xbrlFiling', 'filing']],
         }
     },
-    taxonomyExtension: {
+    filingDocument: {
         tagNameProcessors: [
             // function (name) {
             //     console.log('tagNameProcessors', name);
