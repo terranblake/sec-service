@@ -1,33 +1,29 @@
 const { loadIdentifiersFromSheet, formatRawIdentifiers } = require('../utils/raw-data-helpers');
 const { identifiers: Identifiers } = require('../models')();
 const { filingDocumentTypes } = require('../utils/common-enums');
-
 const { each } = require('lodash');
 
-module.exports.seedTree = async (path, extensionType) => {
+module.exports.seedTree = async (path, documentType) => {
     let result = {};
-    const isValid = isValidType(extensionType);
+    const isValid = isValidType(documentType);
 
-    if (extensionType) {
-        let identifiers = await loadIdentifiersFromSheet(path, extensionType);
-        identifiers = await formatRawIdentifiers(identifiers, extensionType);
+    if (documentType) {
+        let identifiers = await loadIdentifiersFromSheet(path, documentType);
+        identifiers = await formatRawIdentifiers(identifiers, documentType);
 
         await Identifiers.createAll(identifiers, isValid);
-        result[extensionType] = identifiers;
+        result[documentType] = identifiers;
     } else {
-        const { filingDocumentTypes } = require('../utils/common-enums');
-
-        await each(filingDocumentTypes, async (extensionType) => {
-            let identifiers = loadIdentifiersFromSheet(path, extensionType);
-            identifiers = formatRawIdentifiers(identifiers, extensionType);
+        await each(filingDocumentTypes, async (documentType) => {
+            let identifiers = loadIdentifiersFromSheet(path, documentType);
+            identifiers = formatRawIdentifiers(identifiers, documentType);
 
             await Identifiers.createAll(identifiers);
-            result[extensionType] = identifiers;
+            result[documentType] = identifiers;
         });
     }
 
     return result;
 }
 
-const isValidType = (extensionType) =>
-    filingDocumentTypes.includes(extensionType && extensionType.toLowerCase())
+const isValidType = (documentType) => filingDocumentTypes.includes(documentType && documentType.toLowerCase())

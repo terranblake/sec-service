@@ -1,10 +1,4 @@
-const {
-    filings,
-    contexts,
-    facts,
-    taxonomyExtensions,
-    companies
-} = require('../models');
+const { filings, facts, identifiers, companies } = require('../models');
 
 var express = require('express')
 var router = express.Router({ mergeParams: true });
@@ -16,7 +10,7 @@ router
             filings: await filings.model.deleteMany({}),
             contexts: await contexts.model.deleteMany({}),
             facts: await facts.model.deleteMany({}),
-            taxonomyExtensions: await taxonomyExtensions.model.deleteMany({}),
+            identifiers: await identifiers.model.deleteMany({}),
             companies: await companies.model.deleteMany({}),
         });
     })
