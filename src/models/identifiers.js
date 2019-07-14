@@ -12,6 +12,7 @@ const {
 
 Identifier
     * documentType
+    * itemType (textItemType, monetaryItemType)
     * Definition
         * Id
         * Flag
@@ -22,7 +23,6 @@ Identifier
     * Depth
     * Order
     * Weight
-    * itemType (textItemType, monetaryItemType)
     * Parent
     * periodType
     * Abstract

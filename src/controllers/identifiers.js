@@ -1,6 +1,6 @@
 const { loadIdentifiersFromSheet, formatRawIdentifiers } = require('../utils/raw-data-helpers');
-const { Identifiers } = require('../models');
-const { taxonomyExtensionTypes } = require('../utils/common-enums');
+const { identifiers: Identifiers } = require('../models')();
+const { filingDocumentTypes } = require('../utils/common-enums');
 
 const { each } = require('lodash');
 
@@ -15,9 +15,9 @@ module.exports.seedTree = async (path, extensionType) => {
         await Identifiers.createAll(identifiers, isValid);
         result[extensionType] = identifiers;
     } else {
-        const { taxonomyExtensionTypes } = require('../utils/common-enums');
+        const { filingDocumentTypes } = require('../utils/common-enums');
 
-        await each(taxonomyExtensionTypes, async (extensionType) => {
+        await each(filingDocumentTypes, async (extensionType) => {
             let identifiers = loadIdentifiersFromSheet(path, extensionType);
             identifiers = formatRawIdentifiers(identifiers, extensionType);
 
@@ -30,4 +30,4 @@ module.exports.seedTree = async (path, extensionType) => {
 }
 
 const isValidType = (extensionType) =>
-    taxonomyExtensionTypes.includes(extensionType && extensionType.toLowerCase())
+    filingDocumentTypes.includes(extensionType && extensionType.toLowerCase())

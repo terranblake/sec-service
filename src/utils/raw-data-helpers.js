@@ -34,7 +34,9 @@ module.exports.formatFilingBySource = (source, filingObj, company) => ({
 }[source]);
 
 const extractDefitionObjectFromString = (definition) => {
-    definition = definition.split('-');
+    definition = definition
+        && definition.split('-')
+        || [];
     return {
         id: definition[0].trim(),
         flag: definition[1].trim(),
@@ -52,7 +54,7 @@ const extractDocumentTypeFromDescription = description =>
 
 module.exports.formatRawIdentifiers = (identifiers, extensionType) => {
     extensionType = extensionType.toLowerCase();
-    identifierSchema = identifiers.model.schema.obj;
+    identifierSchema = Identifiers.model.schema.obj;
 
     identifiers = map(identifiers, (identifier) => {
         // TODO :: Build out processor to handle every sheet
@@ -71,7 +73,7 @@ module.exports.formatRawIdentifiers = (identifiers, extensionType) => {
             // has most of the important identifiers
             case 'calculation':
                 return {
-                    extensionType,
+                    documentType: extensionType,
                     extendedLinkRole: identifier['extended link role'],
                     definition: identifier['definition'],
                     prefix: identifier['prefix'],
@@ -81,6 +83,7 @@ module.exports.formatRawIdentifiers = (identifiers, extensionType) => {
                     order: identifier['order'],
                     weight: identifier['weight'],
                     parent: identifier['parent'],
+                    itemType: identifier['item type'] || 'monetaryItemType'
                 };
                 break;
             // in depth definitions and supplementary information
@@ -92,15 +95,16 @@ module.exports.formatRawIdentifiers = (identifiers, extensionType) => {
                 // TODO :: Validate the correct unitType is being found and
                 //          not some random one that we don't need
 
+                identifier.documentType = extensionType,
                 identifier.abstract = identifier.abstract === 'true';
-                identifier.extensionType = extensionType;
+                identifier.itemType = identifier['item type'] || 'monetaryItemType'
 
                 for (property in identifier) {
                     if (!Object.keys(identifierSchema).includes(property)) {
                         delete identifier[property]
                     }
                 }
-                console.log({ identifier });
+
                 return identifier;
                 break;
         }
@@ -213,11 +217,11 @@ module.exports.loadCompaniesFromJson = async (path, next) => {
     require('fs').readFile(path, (err, res) => next(JSON.parse(res)));
 }
 
-module.exports.loadidentifiersFromSheet = async (path, sheet, next) => {
+module.exports.loadIdentifiersFromSheet = async (path, sheet, next) => {
     return require('./xlsx').parse(path, sheet, next);
 }
 
-module.exports.createGaapTaxonomyTree = async (tree) => {
+module.exports.createTaxonomyTree = async (tree) => {
     const sortedTree = sortTree(tree);
     logs('finished sorting tree');
     logs('started creating gaap taxonomy tree');
@@ -232,9 +236,9 @@ module.exports.createGaapTaxonomyTree = async (tree) => {
         }
 
         if (leaf.depth != 0) {
-            leaf.definition = extractDefitionObjectFromString(leaf.definition);
-            leaf.parent = extractNameFromParent(leaf.parent, leaf.prefix, true);
-            leaf.parent = await Identifiers.findParentIdentifier(leaf);
+            leaf.definition = leaf.definition && extractDefitionObjectFromString(leaf.definition);
+            leaf.parent = leaf.parent && extractNameFromParent(leaf.parent, leaf.prefix, true);
+            leaf.parent = leaf.parent && await Identifiers.findParentIdentifier(leaf);
             leaf.parent && logs(`found parent identifier for ${leaf.name} depth ${leaf.depth - 1} parent ${leaf.parent}`);
         } else {
             logs(`top-level element ${leaf.name} depth ${leaf.depth - 1}`);
