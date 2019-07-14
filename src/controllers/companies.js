@@ -11,7 +11,7 @@ module.exports.validationReducer = async (tickers) => {
         if (company) {
             found.push(company);
         } else {
-            let metadata = await this.getCompanyMetadata(ticker);
+            let metadata = await this.getMetadata(ticker);
             metadata = JSON.parse(metadata);
 
             if (metadata && metadata.ticker === ticker) {
@@ -26,7 +26,7 @@ module.exports.validationReducer = async (tickers) => {
     return found;
 }
 
-module.exports.getCompanyMetadata = (identifier) => {
+module.exports.getMetadata = (identifier) => {
     const config = require('config');
     // TODO :: Add metadata-service to encrypted config
     const metadataService = config.has('metadata-service.base') || 'http://localhost:5000';

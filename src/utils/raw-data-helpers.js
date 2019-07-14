@@ -4,11 +4,15 @@ const { map, reduce } = require('lodash');
 const { parseString } = require('xml2js');
 const request = require("request");
 
-const { identifiers, companies, filings: Filings } = require('../models');
+const {
+    identifiers: Identifiers,
+    companies: Companies,
+    filings: Filings,
+} = require('../models');
 const { filingDocumentTypes } = require('../utils/common-enums');
 const { logs, warns, errors } = require('../utils/logging');
 
-const { getCompanyMetadata } = require('../controllers/companies');
+const { companies, filings } = require('../controllers');
 
 module.exports.formatFilingBySource = (source, filingObj, company) => ({
     'sec': {
@@ -149,9 +153,9 @@ module.exports.scrapeFilingFromRssItem = async (source, rawRssItem) => {
     const cik = Number(rawRssItem.filing['edgar:cikNumber']);
     const accessionNumber = rawRssItem.filing['edgar:accessionNumber'][0];
 
-    let foundCompany = await companies.findByCik(cik);
+    let foundCompany = await Companies.get({ refId: cik });
     if (!foundCompany) {
-        foundCompany = await getCompanyMetadata(cik);
+        foundCompany = await companies.getMetadata(cik);
         warns('skipping filing processing until ticker to cik conversion is stable');
         return false;
     }
@@ -173,26 +177,21 @@ module.exports.scrapeFilingFromRssItem = async (source, rawRssItem) => {
 module.exports.scrapeFilingFromSec = async (rssItem, company) => {
     let filing = {}
 
-    parseString(rssItem.content, (err, result) => {
+    parseString(rssItem.content, async (err, result) => {
         if (err) {
             console.error(`there was a problem parsing rss item for company ${company._id}`);
+            return false;
         }
 
-        result = result.div;
+        const accessionNumber = result['accession-nunber'][0];
+        const { ticker, _id } = company;
+
+        const filingMetadata = filings.getMetadata(ticker, accessionNumber);
+
         filing = {
-            source: 'sec',
-            company: company._id,
-            type: result['filing-type'][0],
-            refId: result['accession-nunber'][0],
-            // TODO :: Define the period for filing scraped
-            //          using python
-            // period:
-            url: rssItem.link,
-            name: rssItem.title,
+            company: _id,
             publishedAt: rssItem.pubDate,
-            filedAt: result['filing-date'][0],
-            accessionNumber: result['accession-nunber'][0],
-            fileNumber: result['file-number'][0],
+            ...filingMetadata
         }
     });
 
@@ -224,13 +223,13 @@ module.exports.createGaapTaxonomyTree = async (tree) => {
         if (leaf.depth != 0) {
             leaf.definition = extractDefitionObjectFromString(leaf.definition);
             leaf.parent = extractNameFromParent(leaf.parent, leaf.prefix, true);
-            leaf.parent = await identifiers.findParentIdentifier(leaf);
+            leaf.parent = await Identifiers.findParentIdentifier(leaf);
             leaf.parent && logs(`found parent identifier for ${leaf.name} depth ${leaf.depth - 1} parent ${leaf.parent}`);
         } else {
             logs(`top-level element ${leaf.name} depth ${leaf.depth - 1}`);
         }
 
-        await identifiers.create(leaf);
+        await Identifiers.create(leaf);
     };
 
     logs('finished creating gaap taxonomy tree');
