@@ -50,13 +50,12 @@ const filingDocumentSchema = new Schema({
 const filingDocumentModel = model('FilingDocument', filingDocumentSchema)
 module.exports.model = filingDocumentModel;
 
-module.exports.createAll = async (items) => {
-  items.map(async (item) => {
-    item = await create(item);
-  });
+const Crud = require('./crud');
+const crud = new Crud(this.model);
 
-  return items;
-}
+module.exports.get = crud.get;
+module.exports.list = crud.list;
+module.exports.getById = crud.getById;
 
 module.exports.create = async (item) => {
   return await new filingDocumentModel(item)
@@ -66,12 +65,3 @@ module.exports.create = async (item) => {
     })
     .catch(errors);
 }
-
-module.exports.deleteAll = async () => {
-  return await filingDocumentModel
-    .deleteMany()
-    .then((res) => {
-      return res;
-    })
-    .catch(errors);
-};

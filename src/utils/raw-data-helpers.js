@@ -1,5 +1,6 @@
 const moment = require('moment');
 const { map, reduce } = require('lodash');
+const { series } = require('async');
 
 const { parseString } = require('xml2js');
 const request = require("request");
@@ -8,11 +9,11 @@ const {
     identifiers: Identifiers,
     companies: Companies,
     filings: Filings,
-} = require('../models');
+} = require('../models')();
+const { getMetadata } = require('../utils/metadata');
+
 const { filingDocumentTypes } = require('../utils/common-enums');
 const { logs, warns, errors } = require('../utils/logging');
-
-const { companies, filings } = require('../controllers');
 
 module.exports.formatFilingBySource = (source, filingObj, company) => ({
     'sec': {
@@ -108,12 +109,8 @@ module.exports.formatRawIdentifiers = (identifiers, extensionType) => {
     return identifiers;
 }
 
-module.exports.formatFilingDocuments = async (filingsDocuments, company, filing) => {
-    const { refId, _id } = filing;
-
-    let formattedDocuments = await reduce(filingsDocuments, async (filteredP, document) => {
-        const filtered = await filteredP;
-
+module.exports.formatFilingDocuments = async (filingsDocuments, company, filing) =>
+    reduce(filingsDocuments, (acc, document) => {
         const description =
             document.description ||
             document['$'] &&
@@ -123,7 +120,7 @@ module.exports.formatFilingDocuments = async (filingsDocuments, company, filing)
         const docuumentType = extractDocumentTypeFromDescription(description);
         if (docuumentType) {
             document = {
-                filing: _id,
+                filing,
                 company: company._id,
                 type: docuumentType || undefined,
                 status: 'unprocessed',
@@ -135,19 +132,15 @@ module.exports.formatFilingDocuments = async (filingsDocuments, company, filing)
                 fileUrl: document.url || document['$']['edgar:url'],
             };
 
-            filtered.push(_id);
+            acc.push(document);
         } else {
-            warns(`invalid document type from description ${description} refId ${refId}`)
+            warns(`invalid document type from description ${description} filing ${filing}`)
         }
 
         // TODO :: Validate that the minimum
         //          documents have been retrieved
-        return filtered;
+        return acc;
     }, []);
-
-    logs(`retrieved ${formattedDocuments.length} documents for company ${company.ticker} cik ${company.cik} refId ${refId}`);
-    return formattedDocuments;
-}
 
 module.exports.scrapeFilingFromRssItem = async (source, rawRssItem) => {
     const cik = Number(rawRssItem.filing['edgar:cikNumber']);
@@ -155,7 +148,7 @@ module.exports.scrapeFilingFromRssItem = async (source, rawRssItem) => {
 
     let foundCompany = await Companies.get({ refId: cik });
     if (!foundCompany) {
-        foundCompany = await companies.getMetadata(cik);
+        foundCompany = await getMetadata('companies', cik);
         warns('skipping filing processing until ticker to cik conversion is stable');
         return false;
     }
@@ -174,28 +167,46 @@ module.exports.scrapeFilingFromRssItem = async (source, rawRssItem) => {
     return filing;
 }
 
-module.exports.scrapeFilingFromSec = async (rssItem, company) => {
-    let filing = {}
+module.exports.scrapeFilingFromSec = (rssItem, company) => {
+    return new Promise((resolve, reject) => {
+        let filing = {}
+        let accessionNumber
+        let { ticker, _id } = company;
 
-    parseString(rssItem.content, async (err, result) => {
-        if (err) {
-            console.error(`there was a problem parsing rss item for company ${company._id}`);
-            return false;
-        }
+        series([
+            function parseRssItem(next) {
+                parseString(rssItem.content, (err, result) => {
+                    if (err) {
+                        console.error(`there was a problem parsing rss item for company ${company._id}`);
+                        return false;
+                    }
 
-        const accessionNumber = result['accession-nunber'][0];
-        const { ticker, _id } = company;
+                    accessionNumber = result.div['accession-nunber'][0];
+                    next();
+                })
+            },
+            function getFilingMetadata(next) {
+                getMetadata('filings', ticker, accessionNumber)
+                    .then((filingMetadata) => {
+                        filing = {
+                            company: _id,
+                            publishedAt: moment(rssItem.pubDate).format(),
+                            ...filingMetadata
+                        }
+                        filing.fiscalYearEnd = moment(filing.fiscalYearEnd, 'MMYY').format();
+                        console.log({ filing });
 
-        const filingMetadata = filings.getMetadata(ticker, accessionNumber);
+                        next();
+                    });
+            }
+        ], (err, result) => {
+            if (err) {
+                return reject(err);
+            }
 
-        filing = {
-            company: _id,
-            publishedAt: rssItem.pubDate,
-            ...filingMetadata
-        }
-    });
-
-    return filing;
+            return resolve(filing);
+        })
+    })
 }
 
 module.exports.loadCompaniesFromJson = async (path, next) => {

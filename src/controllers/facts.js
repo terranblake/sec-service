@@ -1,9 +1,9 @@
-const { filingDocuments, facts } = require('../models');
+const { filingDocuments, facts } = require('../models')();
 const { download } = require('../utils/raw-data-helpers')
-const { formatContexts, formatFacts, formatUnits } = require('./filing-document-helpers');
+const { formatContexts, formatFacts, formatUnits } = require('../utils/filing-document-helpers');
 const { filingDocument } = require('../utils/parser-options');
 
-module.exports.parseFromFiling = (filingId) => {
+module.exports.parseFromFiling = async (filingId) => {
 	const documents = await filingDocuments.model
 		.find({ filing: filingId })
 		.lean()

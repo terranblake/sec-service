@@ -1,8 +1,8 @@
-const { gaapIdentifiers, facts } = require('../models');
-const { identifierPrefixes, factCurrencies, unitTypes } = require('./common-enums');
+const { identifiers: Identifiers } = require('../models')();
+const { identifierPrefixes, factCurrencies } = require('./common-enums');
 const { logs, errors, warns } = require('./logging');
 const { magnitude, signum } = require('.');
-const supportedUnits = require('./supportedUnits');
+const supportedUnits = require('./supported-units');
 const util = require('util');
 
 module.exports.formatFacts = async (unformattedFacts, contexts, units, filing, company) => {
@@ -13,7 +13,7 @@ module.exports.formatFacts = async (unformattedFacts, contexts, units, filing, c
         if (identifierPrefixes.find(p => fact.includes(p))) {
             // console.log({ fact, unformatted: unformattedFacts[fact] });
             identifierName = fact.substr(fact.indexOf(':') + 1);
-            let identifiers = await gaapIdentifiers.model.find({ name: identifierName });
+            let identifiers = await Identifiers.model.find({ name: identifierName });
             identifiers = identifiers.map(i => i._id);
 
             // we only want facts we have a matching identifier for

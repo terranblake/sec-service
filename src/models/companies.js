@@ -69,7 +69,7 @@ companySchema.index({
 const companyModel = model('Company', companySchema);
 module.exports.model = companyModel;
 
-const Crud = require('../utils/crud');
+const Crud = require('./crud');
 const crud = new Crud(this.model);
 
 module.exports.get = crud.get;

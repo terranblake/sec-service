@@ -5,8 +5,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "a",
 	"definition": "Acre",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -16,8 +16,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "ft²",
 	"definition": "Square Foot",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -27,8 +27,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "mi²",
 	"definition": "Square Miles",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -38,8 +38,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "yd²",
 	"definition": "Square Yard",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -49,8 +49,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "Boe",
 	"definition": "Barrel of Oil Equivalent",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -60,8 +60,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "BTU",
 	"definition": "British Thermal Unit",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -71,8 +71,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "ft-lb",
 	"definition": "Foot-Pound Force",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -82,8 +82,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "MBoe",
 	"definition": "Thousand Barrels of Oil Equivalent",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -93,8 +93,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "Mcfe",
 	"definition": "Thousand Cubic Foot Equivalent",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -104,8 +104,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "MMBoe",
 	"definition": "Millions of Barrels of Oil Equivalent",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -115,8 +115,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "MMBTU",
 	"definition": "Millions of BTU",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -126,8 +126,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "ft",
 	"definition": "Twelve Inches",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -137,8 +137,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "in",
 	"definition": "Inch",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -148,8 +148,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "mi",
 	"definition": "5280 Feet",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -159,8 +159,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "nmi",
 	"definition": "1.15078 Miles (One Minute of Arc Latitude)",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -170,8 +170,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "yd",
 	"definition": "Three Feet",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -181,8 +181,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "lb",
 	"definition": "Pound of Mass, as Used in Commerce",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -192,8 +192,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "oz",
 	"definition": "US Ounce",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -203,8 +203,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "ozt",
 	"definition": "Troy Ounce",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -214,8 +214,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "T",
 	"definition": "US Ton",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -225,8 +225,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "hp",
 	"definition": "Horsepower (Foot-pound per Second)",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -236,8 +236,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "bbl",
 	"definition": "Barrel (of Oil)",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -247,8 +247,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "ft³",
 	"definition": "Cubic Foot",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -258,8 +258,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "gal",
 	"definition": "US Gallon",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -269,8 +269,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "MBbls",
 	"definition": "Thousands of Barrels (of Oil)",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -280,8 +280,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "Mcf",
 	"definition": "Thousands of Cubic Feet",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -291,8 +291,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "MMBbls",
 	"definition": "Millions of Barrels (of Oil)",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -302,8 +302,8 @@ module.exports = [{
 	"nsUnit": "http://www.xbrl.org/2009/utr",
 	"symbol": "MMcf",
 	"definition": "Millions of Cubic Feet",
-	"typeDate": ISODate("2009-12-16T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"baseStandard": "Customary",
 },
 {
@@ -314,8 +314,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "د.إ",
 	"definition": "United Arab Emirates dirham",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -326,8 +326,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "؋",
 	"definition": "Afghan afghani",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -338,8 +338,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "L",
 	"definition": "Albanian lek",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -350,8 +350,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "֏",
 	"definition": "Armenian dram",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -362,8 +362,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "NAƒ",
 	"definition": "Netherlands Antillean guilder",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -374,8 +374,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "Kz",
 	"definition": "Angolan kwanza",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -386,8 +386,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "$",
 	"definition": "Argentine peso",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -398,8 +398,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "$",
 	"definition": "Australian dollar",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -410,8 +410,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "ƒ",
 	"definition": "Aruban florin",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -422,8 +422,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "₼",
 	"definition": "Azerbaijani manat",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -434,8 +434,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "KM",
 	"definition": "Bosnia and Herzegovina convertible mark",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -446,8 +446,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "$",
 	"definition": "Barbados dollar",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -458,8 +458,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "৳",
 	"definition": "Bangladeshi taka",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -470,8 +470,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "лв",
 	"definition": "Bulgarian lev",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -482,8 +482,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": ".د.ب",
 	"definition": "Bahraini dinar",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -494,8 +494,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "FBu",
 	"definition": "Burundian franc",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -506,8 +506,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "$",
 	"definition": "Bermudian dollar (customarily known as Bermuda dollar)",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -518,8 +518,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "$",
 	"definition": "Brunei dollar",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -530,8 +530,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "Bs.",
 	"definition": "Boliviano",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -542,8 +542,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": null,
 	"definition": "Bolivian Mvdol (funds code)",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -554,8 +554,8 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "R$",
 	"definition": "Brazilian real",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 },
 {
@@ -566,7 +566,7 @@ module.exports = [{
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "$",
 	"definition": "Bahamian dollar",
-	"typeDate": ISODate("2003-12-31T00:00:00.000Z"),
-	"versionDate": ISODate("2012-10-31T00:00:00.000Z"),
+	"typeDate": Date("2003-12-31T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
 	"__v": 0
 }];

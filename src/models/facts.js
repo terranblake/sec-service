@@ -47,6 +47,7 @@ const factSchema = new Schema({
     },
     date: {
         type: {
+            type: String,
             enum: dateTypes,
             required: true,
         },
@@ -56,6 +57,7 @@ const factSchema = new Schema({
         },
     },
     itemType: {
+        type: String,
         enum: itemTypes,
         required: true,
     },
@@ -67,7 +69,7 @@ const factSchema = new Schema({
 const factModel = model('Fact', factSchema);
 module.exports.model = factModel;
 
-const Crud = require('../utils/crud');
+const Crud = require('./crud');
 const crud = new Crud(this.model);
 
 module.exports.get = crud.get;

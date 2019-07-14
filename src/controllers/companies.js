@@ -1,4 +1,4 @@
-const { companies } = require('../models');
+const { companies } = require('../models')();
 const { logs, errors } = require('../utils/logging');
 const request = require("request");
 
