@@ -2,23 +2,6 @@ const { model, Schema } = require('mongoose');
 const { exchanges } = require('../utils/common-enums');
 const { supportedRegulators } = require('../utils/common-enums');
 
-/*
-
-Company
-    * Name
-    * Ticker
-    * ref (sec, regulatory bod)
-    * refId (exchange/regulatory-body unique id, e.g. cik)
-    * refIndustryId (sic for companies reporting to the sec)
-    * fiscalYearEnd
-    * Exchange (nyse, nasdaq)
-    * metadata
-        * State
-        * Country
-        * Address
-
-*/
-
 const companySchema = new Schema({
     name: {
         type: String,
@@ -58,6 +41,8 @@ const companySchema = new Schema({
     state: String,
     country: String,
     address: String,
+    createdAt: Date,
+    updatedAt: Date,
 });
 
 companySchema.index({
@@ -68,41 +53,6 @@ companySchema.index({
 
 const companyModel = model('Company', companySchema);
 module.exports.model = companyModel;
-
-const Crud = require('./crud');
-const crud = new Crud(this.model);
-
-module.exports.get = crud.get;
-module.exports.list = crud.list;
-module.exports.getById = crud.getById;
-
-module.exports.create = async (newItem) => {
-    newItem.ticker = newItem.ticker.trim();
-    return await new companyModel(newItem)
-        .save()
-        .then((createdItem) => {
-            return createdItem;
-        })
-        .catch(console.error);
-}
-
-module.exports.deleteAll = async () => {
-    return await companyModel
-        .deleteMany()
-        .then((result) => {
-            return result;
-        })
-        .catch(console.error);
-};
-
-// module.exports.findById = async (_id) => {
-//     return await companyModel
-//         .findOne({ _id })
-//         .then((res) => {
-//             return res;
-//         })
-//         .catch(console.error);
-// }
 
 module.exports.findByCik = async (cik) => {
     return await companyModel

@@ -1,11 +1,34 @@
 const { readdirSync } = require('fs');
-const fileName = __filename;
 
-module.exports = () => {
-	const models = {};
-	for (let route of readdirSync('./src/models/').filter(f => f.includes('.js') && f !== fileName)) {
-		models[route.split('.')[0]] = require(`./${route}`);
+const Crud = require('./crud');
+let crudMethods = Object
+	.getOwnPropertyNames(Crud.prototype)
+	.filter(p => !['constructor'].includes(p))
+	.reduce((acc, curr) => {
+		acc[curr] = Crud.prototype[curr];
+		return acc;
+	}, {});
+
+let collections = {}
+
+module.exports = async () => {
+	for (let route of readdirSync('./src/models/').filter(f => f.includes('.js') && f !== __filename)) {
+		const modelName = route.split('.')[0];
+		if (collections[modelName]) {
+			continue;
+		}
+
+		const collection = require(`./${route}`);
+		if (collection.model) {
+			for (let func in crudMethods) {
+				collection[func] = async function () {
+					return crudMethods[func](collection.model, ...arguments)
+				};
+			}
+		}
+		
+		collections[modelName] = collection;
 	}
-	
-	return models;
+
+	return collections;
 }

@@ -1,22 +1,6 @@
 const { model, Schema } = require('mongoose');
 const { errors } = require('../utils/logging');
-
-/*
-
-FilingDocument
-  * Filing (ref: Filing)
-  * Company (ref: Company)
-  * Type (instance, label, definition)
-  * Status (unprocessed, processing, processed)
-  * Metadata
-    * sequenceNumber
-    * Name
-    * xbrlFormType
-    * Size
-    * Description
-    * Url
-
-*/
+const { filingDocumentTypes, filingDocumentStatuses } = require('../utils/common-enums');
 
 const filingDocumentSchema = new Schema({
   filing: {
@@ -31,12 +15,12 @@ const filingDocumentSchema = new Schema({
   },
   type: {
     type: String,
-    enum: require('../utils/common-enums').filingDocumentTypes,
+    enum: filingDocumentTypes,
     required: true,
   },
   status: {
     type: String,
-    enum: require('../utils/common-enums').extensionElementStatuses,
+    enum: filingDocumentStatuses,
     required: true,
   },
   sequenceNumber: String,
@@ -45,23 +29,9 @@ const filingDocumentSchema = new Schema({
   fileSize: String,
   fileDescription: String,
   fileUrl: String,
+  createdAt: Date,
+  updatedAt: Date,
 });
 
 const filingDocumentModel = model('FilingDocument', filingDocumentSchema)
 module.exports.model = filingDocumentModel;
-
-const Crud = require('./crud');
-const crud = new Crud(this.model);
-
-module.exports.get = crud.get;
-module.exports.list = crud.list;
-module.exports.getById = crud.getById;
-
-module.exports.create = async (item) => {
-  return await new filingDocumentModel(item)
-    .save()
-    .then((res) => {
-      return res;
-    })
-    .catch(errors);
-}

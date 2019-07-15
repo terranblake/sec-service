@@ -12,8 +12,8 @@ const {
 } = require('../models')();
 const { getMetadata } = require('../utils/metadata');
 
-const { filingDocumentTypes } = require('../utils/common-enums');
-const { logs, warns, errors } = require('../utils/logging');
+const { filingDocumentTypes } = require('./common-enums');
+const { logs, warns } = require('../utils/logging');
 
 module.exports.formatFilingBySource = (source, filingObj, company) => ({
     'sec': {

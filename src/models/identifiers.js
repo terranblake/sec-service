@@ -8,28 +8,6 @@ const {
     itemTypes
 } = require('../utils/common-enums');
 
-/*
-
-Identifier
-    * documentType
-    * itemType (textItemType, monetaryItemType)
-    * Definition
-        * Id
-        * Flag
-        * Context
-    * Prefix
-    * Name
-    * Label
-    * Depth
-    * Order
-    * Weight
-    * Parent
-    * periodType
-    * Abstract
-    * Documentation
-
-*/
-
 const identifierSchema = new Schema({
     documentType: {
         type: String,
@@ -96,6 +74,8 @@ const identifierSchema = new Schema({
     },
     abstract: Boolean,
     documentation: String,
+    createdAt: Date,
+    updatedAt: Date,
 });
 
 identifierSchema.index({
@@ -115,32 +95,6 @@ identifierSchema.index({
 
 const identifierModel = model('Identifier', identifierSchema);
 module.exports.model = identifierModel;
-
-module.exports.createAll = async (items, createTree) => {
-    if (createTree) {
-        return require('../utils/raw-data-helpers')
-            .createTaxonomyTree(
-                items,
-                this.create
-            );
-    } else {
-        items.map(async (item) => {
-            item = await identifierModel.create(item);
-        });
-
-        return items;
-    }
-
-}
-
-module.exports.create = async (newItem) => {
-    return await new identifierModel(newItem)
-        .save()
-        .then((createdItem) => {
-            return createdItem;
-        })
-        .catch(errors);
-}
 
 module.exports.findByDepth = async (depth) => {
     return await identifierModel
