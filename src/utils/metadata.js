@@ -26,3 +26,29 @@ module.exports.getMetadata = (model, ticker, accessionNumber) => {
             .on('error', (err) => reject(err));
     });
 }
+
+module.exports.units = () => {
+	return new Promise((resolve, reject) => {
+        const config = require('config');
+        // TODO :: Add metadata-service to encrypted config
+        const metadataService = config.has('metadata-service.base') || 'http://localhost:5000';
+        const endpoint = `${metadataService}/units`;
+
+        let data = "";
+        request
+            .get(endpoint)
+            .on('response', (response) => {
+                logs('retrieving units');
+                response.on('data', (chunk) => {
+                    data += chunk;
+                });
+
+                response.on('end', () => {
+                    logs('retrieved units');
+                    data = JSON.parse(data);
+                    resolve(data);
+                });
+            })
+            .on('error', (err) => reject(err));
+    });
+}

@@ -1,4 +1,4 @@
-const { identifiers: Identifiers } = require('../models')();
+const identifiers = require('../models/identifiers');
 const { identifierPrefixes, factCurrencies } = require('./common-enums');
 const { logs, errors, warns } = require('./logging');
 const { magnitude, signum } = require('.');
@@ -13,13 +13,13 @@ module.exports.formatFacts = async (unformattedFacts, contexts, units, filing, c
         if (identifierPrefixes.find(p => fact.includes(p))) {
             // console.log({ fact, unformatted: unformattedFacts[fact] });
             identifierName = fact.substr(fact.indexOf(':') + 1);
-            let identifiers = await Identifiers.model.find({ name: identifierName });
-            identifiers = identifiers.map(i => i._id);
+            let matchedIdentifiers = await identifiers.model.find({ name: identifierName });
+            matchedIdentifiers = matchedIdentifiers.map(i => i._id);
 
             // we only want facts we have a matching identifier for
-            if (Array.isArray(identifiers) && identifiers.length) {
+            if (Array.isArray(matchedIdentifiers) && matchedIdentifiers.length) {
 
-                const likeFacts = await expandAndFormatLikeFacts(unformattedFacts[fact], contexts, units, filing, company, identifiers, identifierName);
+                const likeFacts = await expandAndFormatLikeFacts(unformattedFacts[fact], contexts, units, filing, company, matchedIdentifiers, identifierName);
                 likeFacts && likeFacts.forEach((formatted) => {
                     expandedFacts.push(formatted);
                 });
@@ -37,14 +37,22 @@ module.exports.formatFacts = async (unformattedFacts, contexts, units, filing, c
 async function expandAndFormatLikeFacts(facts, contexts, units, filing, company, identifiers, identifierName) {
     let updatedFacts = [];
     
-    for (let i in facts) {
-        let fact = facts[i], unit;
-        fact = await normalizeFact(fact);
-        unit = await units.find(u => u.identifier === fact.unitRef);
+    for (let fact of facts) {
+        const { unitRef } = await normalizeFact(fact);
+        unit = await units.find(u => u.identifier === unitRef);
+        if (!unit) {
+            warns(`missing unit for fact identifier ${identifierName} filing ${filing}`);
+            continue;
+        }
+
         const context = contexts.find(c =>
-            c.company === company
-            && c.label === fact.contextRef
+            c.company === company.toString()
+            && c.label === contextRef
         );
+        
+        if (!context) {
+            continue;
+        }
 
         fact = {
             filing,
@@ -54,6 +62,7 @@ async function expandAndFormatLikeFacts(facts, contexts, units, filing, company,
             date: context.date,
             itemType: unit.type,
             value: fact.value,
+            label: fact.label || fact.name,
             // TODO :: Get balance for facts (debit, credit)
             // balance: context.balance,
             sign: unit.signum === '+',
@@ -63,7 +72,7 @@ async function expandAndFormatLikeFacts(facts, contexts, units, filing, company,
             errors(`missing fields for fact identifier ${identifierName} filing ${filing}`);
         }
 
-        logs(`formatted fact unit ${unit && unit.identifier} identifier ${identifierName} context ${res && res.label} filing ${filing}`);
+        logs(`formatted fact unit ${unit && unit.identifier} identifier ${identifierName} context ${context && context.label} filing ${filing}`);
         updatedFacts.push(fact);
     };
 
@@ -77,10 +86,10 @@ function normalizeFact(fact) {
         unitRef
     } = fact['$'];
 
-    const signum = signum(decimals);
+    const factSignum = signum(decimals);
     value =
         decimals &&
-        magnitude(fact['_'], decimals, signum) ||
+        magnitude(fact['_'], decimals, factSignum) ||
         fact['_'];
 
     return {
@@ -88,7 +97,7 @@ function normalizeFact(fact) {
         contextRef,
         unitRef: unitRef && unitRef.replace('iso4217_', '').toLowerCase(),
         decimals,
-        signum,
+        signum: factSignum,
     }
 }
 
@@ -123,28 +132,30 @@ module.exports.formatUnits = async (extensionUnits, filing, company) => {
         // TODO :: Handle this more elegantly. it doesn't account for other iso variants
         //          and only returns a single value
         unitId = unit['$'].id.replace('iso4217_', '').toLowerCase();
-        if (unitIdentifiers.includes(unitId) || factCurrencies.includes(other)) {
+        const foundUnit = supportedUnits.find(u => u.identifier === unitId);
+        if (foundUnit || factCurrencies.includes(other)) {
             logs(`found unit with matching identifier ${unitId}`);
-            formattedUnits.push(supportedUnits.find(s => s.identifier === unitId));
+            formattedUnits.push(foundUnit);
         } else {
-            warns(`skipping unsupported unit ${unitId} filing ${filing} company ${company}`);
+            warns(`skipping unsupported unit ${unitId} filing ${filing} company ${company.name}`);
         }
     }
 
-    return formattedUnits.filter(u => u);
+    return formattedUnits.filter(u => u && u.identifier);
 }
 
 module.exports.formatContexts = async (extensionContexts, filing, company) => {
     let formattedContexts = [];
-    for (let context in extensionContexts) {
-        context = extensionContexts[context];
-
+    for (let context of extensionContexts) {
         let entity = (context["xbrli:entity"] || context.entity)[0];
-        let segment = (entity["xbrli:segment"] || entity.segment);
+        let segments = (entity["xbrli:segment"] || entity.segment);
+        if (segments && segments.length) {
+            continue;
+        }
 
-        members = getContextMembers(filing, company, segment);
+        members = getContextMembers(filing, company, segments);
 
-        const period = (context["xbrli:period"] || context.period)[0]
+        const period = (context["xbrli:period"] || context.period)[0];
         let date = getContextDate(period);
 
         formattedContexts.push({
@@ -161,16 +172,13 @@ module.exports.formatContexts = async (extensionContexts, filing, company) => {
 
 function getContextDate(contextPeriod) {
     if (contextPeriod) {
-        const dateType =
-            Object.keys(contextPeriod)[0].includes('instant')
-                ? 'cross-sectional'
-                : 'time-series';
+        const dateType = Object.keys(contextPeriod)[0].includes('instant') ? 'instant' : 'series';
 
         return {
             type: dateType,
             value:
                 dateType === 'instant'
-                    ? (contextPeriod["xbrli:instant"] || contextPeriod.instant)[0]
+                    ? new Date((contextPeriod["xbrli:instant"] || contextPeriod.instant)[0])
                     : {
                         startDate: new Date(contextPeriod["xbrli:startDate"] || contextPeriod.startDate),
                         endDate: new Date(contextPeriod["xbrli:endDate"] || contextPeriod.endDate)
@@ -179,26 +187,28 @@ function getContextDate(contextPeriod) {
     }
 }
 
-function getContextMembers(filing, company, members) {
-    if (members && members[0]) {
-        members = members[0];
-
-        if (members["xbrldi:explicitMember"] || members['_'] || members.explicitMember) {
-            newMembers = [];
-            members = members["xbrldi:explicitMember"] || members.explicitMember || members;
-
-            if (Array.isArray(members)) {
-                members.forEach((member) => {
-                    newMembers.push({ value: member["_"], gaapDimension: member['$'].dimension });
-                });
-            } else {
-                newMembers.push({ value: members["_"], gaapDimension: members['$'].dimension });
-            }
-
-            return newMembers;
-        } else {
-            console.log('invalid members', util.inspect({ members }));
-            warns(`explicit member key does not exist for this context company ${company} filing ${filing}`);
-        }
+function getContextMembers(filing, company, members = []) {
+    if (!members.length) {
+        return members;
     }
+
+    members = members[0];
+
+    if (!members["xbrldi:explicitMember"] && !members['_'] && !members.explicitMember) {
+        console.log('invalid members', util.inspect({ members }));
+        warns(`explicit member key does not exist for this context company ${company} filing ${filing}`);
+    }
+
+    newMembers = [];
+    members = members["xbrldi:explicitMember"] || members.explicitMember || members;
+
+    if (Array.isArray(members)) {
+        members.forEach((member) => {
+            newMembers.push({ value: member["_"], gaapDimension: member['$'].dimension });
+        });
+    } else {
+        newMembers.push({ value: members["_"], gaapDimension: members['$'].dimension });
+    }
+
+    return newMembers;
 }

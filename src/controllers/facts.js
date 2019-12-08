@@ -1,40 +1,72 @@
-const { filingDocuments, facts } = require('../models')();
+const { readFile } = require('fs');
+const { parseString } = require('xml2js');
+const { promisify } = require('util');
+
+const facts = require('../models/facts');
+const filingDocuments = require('../models/filingDocuments');
+
+const { logs, errors } = require('../utils/logging');
 const { download } = require('../utils/raw-data-helpers')
 const { formatContexts, formatFacts, formatUnits } = require('../utils/filing-document-helpers');
-const { filingDocument } = require('../utils/parser-options');
+const { filingDocument: filingDocumentParserOptions } = require('../utils/parser-options');
+
+const readFileAsync = promisify(readFile);
+const parseStringAsync = promisify(parseString);
 
 module.exports.parseFromFiling = async (filingId) => {
 	const documents = await filingDocuments.model
-		.find({ filing: filingId })
+		.find({ filing: filingId, type: 'instance' })
 		.lean()
 		.populate({ path: 'company' });
+	let factIds = [];
+
+	logs(`found ${documents.length} filingDocuments to crawl for facts`);
 
 	for (let document of documents) {
-		const { fileUrl, type, company } = document;
+		const { fileUrl, company, status, statusReason, _id } = document;
+		let elements;
 
-		let elements = await download(fileUrl, filingDocument, true);
+		if (status === 'crawling' || status === 'crawled') {
+			errors(`skipping crawling filingDocument ${_id} for ${company._id} because filingDocument is being crawled or was already crawled`);
+			continue;
+		}
+
+		// read from local archive if exists
+		if (status === 'downloaded' && statusReason) {
+			logs(`filingDocument ${_id} loaded from local archive since it has been downloaded company ${company} filing ${filingId}`);
+			elements = await readFileAsync(statusReason);
+		// otherwise download the document again
+		} else {
+			logs(`filingDocument ${_id} downloaded from source since it has not been downloaded company ${company} filing ${filingId}`);
+			elements = await download(fileUrl);
+		}
+
+		elements = await parseStringAsync(elements, filingDocumentParserOptions);
 		elements = elements["xbrli:xbrl"] || elements.xbrl;
 
-		// don't support other types until
-		//  instance parsing is stable
-		if (type === 'instance') {
-			// format units
-			let rawUnits = elements["xbrli:unit"] || elements.unit;;
-			validUnits = await formatUnits(rawUnits, filingId, company);
+		await filingDocuments.model.findOneAndUpdate({ _id: document._id }, { status: 'crawling' });
 
-			// TODO :: this probably won't work for everything
-			let rawContexts = elements['xbrli:context'] || elements.context;
-			let newContexts = await formatContexts(rawContexts, filingId, company);
+		// format units
+		let rawUnits = elements["xbrli:unit"] || elements.unit;;
+		validUnits = await formatUnits(rawUnits, filingId, company);
 
-			// format facts
-			let newFacts = await formatFacts(elements, newContexts, validUnits, filingId, company);
-			for (let fact of newFacts) {
-				await facts.create(fact);
-			}
-
-			return newFacts;
+		if (!validUnits || Array.isArray(validUnits) && !validUnits.length) {
+			errors('no units returned from unit formatter. bailing!');
+			return;
 		}
+
+		// TODO :: this probably won't work for everything
+		let rawContexts = elements['xbrli:context'] || elements.context;
+		let newContexts = await formatContexts(rawContexts, filingId, company);
+
+		// format facts
+		const newFacts = await formatFacts(elements, newContexts, validUnits, filingId, company);
+		for (let fact of newFacts) {
+			await facts.model.create(fact);
+		}
+
+		await filingDocuments.model.findOneAndUpdate({ _id: document._id }, { status: 'crawled' });
 	}
 
-	return documents;
+	return factIds;
 }

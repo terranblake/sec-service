@@ -23,6 +23,12 @@ module.exports.signum = (decimals) => {
 }
 
 module.exports.magnitude = (value, decimals, sign) => {
+    // if the value ends in a zero, then it has already been
+    // rounded and doesn't need to be adjusted
+    if (Number(String(value).slice(value.length - 1)) === 0) {
+        return Number(value);
+    }
+
     if (decimals && !['+', '-'].includes(sign)) {
         errors(`cannot normalize[${value}] without +/- sign[${sign}] in decimals[${decimals}]`);
         return value;

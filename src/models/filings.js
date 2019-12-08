@@ -1,6 +1,6 @@
 const { model, Schema } = require('mongoose');
 const { errors } = require('../utils/logging');
-const { filingTypes, filingStatuses } = require('../utils/common-enums');
+const { filingTypes, itemStates } = require('../utils/common-enums');
 
 const filingSchema = new Schema({
   source: {
@@ -31,9 +31,9 @@ const filingSchema = new Schema({
   },
   status: {
     type: String,
-    enum: filingStatuses,
+    enum: itemStates,
     required: true,
-    default: 'unprocessed',
+    default: 'seeded',
   },
   url: String,
   name: String,
@@ -45,6 +45,11 @@ const filingSchema = new Schema({
   createdAt: Date,
   updatedAt: Date,
 });
+
+filingSchema.index({
+  company: 1,
+  refId: 1
+}, { unique: true });
 
 const filingModel = model('Filing', filingSchema);
 module.exports.model = filingModel;

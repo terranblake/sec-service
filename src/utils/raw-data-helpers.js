@@ -1,17 +1,14 @@
 const moment = require('moment');
 const { map, reduce } = require('lodash');
 const { series } = require('async');
-
-const { parseString } = require('xml2js');
 const request = require("request");
+const { parseString } = require('xml2js');
 
-const {
-    identifiers: Identifiers,
-    companies: Companies,
-    filings: Filings,
-} = require('../models')();
+const identifiers = require('../models/identifiers');
+const companies = require('../models/companies');
+const filings = require('../models/filings');
+
 const { getMetadata } = require('../utils/metadata');
-
 const { filingDocumentTypes } = require('./common-enums');
 const { logs, warns } = require('../utils/logging');
 
@@ -44,37 +41,36 @@ const extractDefitionObjectFromString = (definition) => {
     };
 }
 
-const extractNameFromParent = (parent, prefix, hasColon) => parent.split(hasColon ? ':' : prefix).pop();
-
-const extractDocumentTypeFromDescription = description =>
-    description &&
-    filingDocumentTypes.find(type =>
-        new RegExp(type).test(description.toLowerCase())
-    );
-
-module.exports.formatRawIdentifiers = (identifiers, extensionType) => {
+module.exports.formatRawIdentifiers = (rawIdentifiers, extensionType) => {
     extensionType = extensionType.toLowerCase();
-    identifierSchema = Identifiers.model.schema.obj;
+    // identifierSchema = identifiers.model.schema.obj;
 
-    identifiers = map(identifiers, (identifier) => {
+    rawIdentifiers = map(rawIdentifiers, (identifier) => {
         // TODO :: Build out processor to handle every sheet
         //          in the taxonomy declaration documents
         // Use the following to remove all invalid properties
         // after switch statement formatters
         /*
             for (property in identifier) {
-                if (!Object.keys(identifierSchema).includes(property)) {
+                if (!Object.keys(rawIdentifierschema).includes(property)) {
                     delete identifier[property]
                 }
             }
         */
 
         switch (extensionType) {
-            // has most of the important identifiers
+            // has most of the important rawIdentifiers
             case 'calculation':
+                const extendedLinkRole = identifier['extended link role'];
+                const [roleType, roleName] = extendedLinkRole.split('/').slice(-2);
+
                 return {
                     documentType: extensionType,
                     extendedLinkRole: identifier['extended link role'],
+                    role: {
+                        type: roleType,
+                        name: roleName
+                    },
                     definition: identifier['definition'],
                     prefix: identifier['prefix'],
                     name: identifier['name'],
@@ -85,14 +81,13 @@ module.exports.formatRawIdentifiers = (identifiers, extensionType) => {
                     parent: identifier['parent'],
                     itemType: identifier['item type'] || 'monetaryItemType'
                 };
-                break;
             // in depth definitions and supplementary information
             //  about each identifier e.g. documentation, type, periodType, etc.
             case 'elements':
                 unitType = identifier.type && identifier.type.split(':')[1];
                 // identifier.unitType = unitType && unitType.toLowerCase();
 
-                // TODO :: Validate the correct unitType is being found and
+                // todo: validate the correct unitType is being found and
                 //          not some random one that we don't need
 
                 identifier.documentType = extensionType,
@@ -106,11 +101,10 @@ module.exports.formatRawIdentifiers = (identifiers, extensionType) => {
                 }
 
                 return identifier;
-                break;
         }
     })
 
-    return identifiers;
+    return rawIdentifiers;
 }
 
 module.exports.formatFilingDocuments = async (filingsDocuments, company, filing) =>
@@ -121,28 +115,26 @@ module.exports.formatFilingDocuments = async (filingsDocuments, company, filing)
             document['$']['edgar:description'] ||
             false;
 
-        const docuumentType = extractDocumentTypeFromDescription(description);
-        if (docuumentType) {
-            document = {
-                filing,
-                company: company._id,
-                type: docuumentType || undefined,
-                status: 'unprocessed',
-                sequenceNumber: document.sequence || document['$']['edgar:sequence'],
-                fileName: document.fileName || document['$']['edgar:file'],
-                fileType: document.fileType || document['$']['edgar:type'],
-                fileSize: document.fileSize || document['$']['edgar:size'],
-                fileDescription: description,
-                fileUrl: document.url || document['$']['edgar:url'],
-            };
-
-            acc.push(document);
-        } else {
-            warns(`invalid document type from description ${description} filing ${filing}`)
+        const documentType = description && filingDocumentTypes.find(type => new RegExp(type).test(description.toLowerCase()));
+        if (!documentType) {
+            warns(`invalid document type from description ${description} filing ${filing}`);
+            return acc;
         }
 
-        // TODO :: Validate that the minimum
-        //          documents have been retrieved
+        acc.push({
+            filing,
+            company: company._id,
+            type: documentType || undefined,
+            status: 'seeded',
+            sequenceNumber: document.sequence || document['$']['edgar:sequence'],
+            fileName: document.fileName || document['$']['edgar:file'],
+            fileType: document.fileType || document['$']['edgar:type'],
+            fileSize: document.fileSize || document['$']['edgar:size'],
+            fileDescription: description,
+            fileUrl: document.url || document['$']['edgar:url'],
+        });
+
+        // todo: Validate that the minimum documents have been retrieved
         return acc;
     }, []);
 
@@ -150,18 +142,14 @@ module.exports.scrapeFilingFromRssItem = async (source, rawRssItem) => {
     const cik = Number(rawRssItem.filing['edgar:cikNumber']);
     const accessionNumber = rawRssItem.filing['edgar:accessionNumber'][0];
 
-    let foundCompany = await Companies.get({ refId: cik });
+    let foundCompany = await companies.model.find({ refId: cik });
     if (!foundCompany) {
         foundCompany = await getMetadata('companies', cik);
         warns('skipping filing processing until ticker to cik conversion is stable');
         return false;
     }
 
-    const foundFiling = await Filings.get({
-        company: foundCompany && foundCompany._id || null,
-        accessionNumber
-    });
-
+    const foundFiling = await filings.model.find({ company: foundCompany._id, accessionNumber });
     if (Array.isArray(foundFiling) && foundFiling.length) {
         warns(`duplicate filing company ${foundCompany.ticker} cik ${cik} accessionNumber ${accessionNumber}. bailing!`);
         return false;
@@ -222,60 +210,74 @@ module.exports.loadIdentifiersFromSheet = async (path, sheet, next) => {
 }
 
 module.exports.createTaxonomyTree = async (tree) => {
+    const topLevelIdentifiers = [];
     const sortedTree = sortTree(tree);
     logs('finished sorting tree');
     logs('started creating gaap taxonomy tree');
 
     let depthC = 0;
-    for (let leaf in sortedTree) {
-        leaf = sortedTree[leaf];
+    for (let identifier of sortedTree) {
+        const { depth, definition, name, parent } = identifier;
 
-        if (leaf.depth > depthC) {
+        if (depth > depthC) {
             logs(`creating depth ${depthC} leaves`);
             depthC++;
         }
 
-        if (leaf.depth != 0) {
-            leaf.definition = leaf.definition && extractDefitionObjectFromString(leaf.definition);
-            leaf.parent = leaf.parent && extractNameFromParent(leaf.parent, leaf.prefix, true);
-            leaf.parent = leaf.parent && await Identifiers.findParentIdentifier(leaf);
-            leaf.parent && logs(`found parent identifier for ${leaf.name} depth ${leaf.depth - 1} parent ${leaf.parent}`);
-        } else {
-            logs(`top-level element ${leaf.name} depth ${leaf.depth - 1}`);
+        // todo: no longer populating defintion object. this field
+        // now lives in the role object on the identifier model
+        const { id: roleId } = extractDefitionObjectFromString(definition);
+        if (identifier.role) {
+            identifier.role.id = roleId;
         }
 
-        await Identifiers.create(leaf);
+        const parentIdentifierName = parent && parent.split(':').pop();
+        const parentIdentifier = await identifiers.findParentIdentifier(depth, parentIdentifierName, roleId);
+        
+        if (parentIdentifier) {
+            logs(`found parent identifier for ${name} depth ${depth - 1} parent ${identifier.parent}`);
+            identifier.parent = parentIdentifier;
+        }
+
+        logs(`creating identifier ${identifier.name}`);
+        identifier = await identifiers.model.create(identifier);
+
+        if (depth === 0) {
+            logs(`top-level element ${name} depth ${depth - 1}`);
+            topLevelIdentifiers.push(identifier);
+        }
     };
 
     logs('finished creating gaap taxonomy tree');
+    return topLevelIdentifiers;
 }
 
-module.exports.download = (extensionLink, parsingOptions, parse = true) => {
+module.exports.download = (extensionLink, progress = 1 /* log every 1 mb */) => {
+    logs({ message: `downloading file from ${extensionLink}` });
+    
     return new Promise((resolve, reject) => {
         let data = "";
 
         request
             .get(extensionLink)
             .on('response', (response) => {
+                let cur = 0;
+
                 logs(`\tdownloading ${extensionLink}`);
                 response.on('data', (chunk) => {
                     data += chunk;
+                    cur += chunk.length;
+
+                    const megaBytes = (cur / 1048576).toFixed(2);
+
+                    if (progress && megaBytes % progress === 0) {
+                        logs({ message: `Downloaded ${megaBytes}mb` });
+                    }
                 });
 
                 response.on('end', () => {
                     logs(`\tdownloaded ${extensionLink}`);
-                    if (parse) {
-                        parseString(data, parsingOptions, (err, result) => {
-                            logs(`\t\tparsed ${extensionLink}`);
-                            if (err) {
-                                logs(err);
-                            }
-
-                            resolve(result);
-                        });
-                    }
-
-                    resolve(data);
+                    return resolve(data);
                 });
             })
             .on('error', (err) => reject(err));

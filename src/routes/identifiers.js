@@ -7,13 +7,13 @@ const {
     getCoverageByCompanyAndIdentifier
 } = require('../utils/identifier-coverage');
 
-var express = require('express')
-var router = express.Router({ mergeParams: true });
+const express = require('express');
+const router = express.Router({ mergeParams: true });
 
 router
     // Use this route for querying the tree, once built
     .get('/pick', async (req, res) => {
-        const identifier = await Identifier.findByDepth(0);
+        const identifier = await identifiers.findByDepth(0);
         if (Array.isArray(identifier) && identifier.length) {
             res.status(200).send(identifier[0]);
         }

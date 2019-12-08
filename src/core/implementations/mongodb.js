@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const config = require('config');
 const fileName = __filename.split('/').pop().split('.')[0];
+const { promisify } = require('util');
 
 const connectionEvents = {
     connecting: "Emitted when Mongoose starts making its initial connection to the MongoDB server",
@@ -37,7 +38,8 @@ class MongoDB {
 
         for (let name in collections) {
             const collection = collections[name];
-            let changeStream = await collection.watch();
+            const changeStream = collection.watch();
+
             changeStream.on('change', (data) => {
                 console.log(`mongodb documentChange event emitted`);
                 eventHandler('mongodb', 'documentChange', data)

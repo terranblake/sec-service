@@ -1,4 +1,15 @@
 module.exports = [{
+	"identifier": "usd",
+	"name": "USD",
+	"type": "monetaryItemType",
+	"nsUnit": "http://www.xbrl.org/2009/usd",
+	"symbol": "$",
+	"definition": "United States Dollar",
+	"typeDate": Date("2009-12-16T00:00:00.000Z"),
+	"versionDate": Date("2012-10-31T00:00:00.000Z"),
+	"baseStandard": "Customary",
+},
+{
 	"identifier": "acre",
 	"name": "acre",
 	"type": "areaitemtype",
@@ -309,7 +320,7 @@ module.exports = [{
 {
 	"identifier": "aed",
 	"name": "u.a.e. dirham",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "د.إ",
@@ -321,7 +332,7 @@ module.exports = [{
 {
 	"identifier": "afn",
 	"name": "afghan afghani",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "؋",
@@ -333,7 +344,7 @@ module.exports = [{
 {
 	"identifier": "all",
 	"name": "albanian lek",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "L",
@@ -345,7 +356,7 @@ module.exports = [{
 {
 	"identifier": "amd",
 	"name": "armenian dram",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "֏",
@@ -357,7 +368,7 @@ module.exports = [{
 {
 	"identifier": "ang",
 	"name": "netherlands antillean guilder",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "NAƒ",
@@ -369,7 +380,7 @@ module.exports = [{
 {
 	"identifier": "aoa",
 	"name": "angolan kwanza",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "Kz",
@@ -381,7 +392,7 @@ module.exports = [{
 {
 	"identifier": "ars",
 	"name": "argentine peso",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "$",
@@ -393,7 +404,7 @@ module.exports = [{
 {
 	"identifier": "aud",
 	"name": "australian dollar",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "$",
@@ -405,7 +416,7 @@ module.exports = [{
 {
 	"identifier": "awg",
 	"name": "aruban florin",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "ƒ",
@@ -417,7 +428,7 @@ module.exports = [{
 {
 	"identifier": "azn",
 	"name": "azerbaijani manat",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "₼",
@@ -429,7 +440,7 @@ module.exports = [{
 {
 	"identifier": "bam",
 	"name": "bosnia and herzegovina convertible mark",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "KM",
@@ -441,7 +452,7 @@ module.exports = [{
 {
 	"identifier": "bbd",
 	"name": "barbados dollar",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "$",
@@ -453,7 +464,7 @@ module.exports = [{
 {
 	"identifier": "bdt",
 	"name": "bangladeshi taka",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "৳",
@@ -465,7 +476,7 @@ module.exports = [{
 {
 	"identifier": "bgn",
 	"name": "bulgarian lev",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "лв",
@@ -477,7 +488,7 @@ module.exports = [{
 {
 	"identifier": "bhd",
 	"name": "bahraini dinar",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": ".د.ب",
@@ -489,7 +500,7 @@ module.exports = [{
 {
 	"identifier": "bif",
 	"name": "burundian franc",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "FBu",
@@ -501,7 +512,7 @@ module.exports = [{
 {
 	"identifier": "bmd",
 	"name": "bermuda dollar",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "$",
@@ -513,7 +524,7 @@ module.exports = [{
 {
 	"identifier": "bnd",
 	"name": "brunei dollar",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "$",
@@ -525,7 +536,7 @@ module.exports = [{
 {
 	"identifier": "bob",
 	"name": "boliviano",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "Bs.",
@@ -537,7 +548,7 @@ module.exports = [{
 {
 	"identifier": "bov",
 	"name": "bolivian mvdol",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": null,
@@ -549,7 +560,7 @@ module.exports = [{
 {
 	"identifier": "brl",
 	"name": "brazilian real",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "R$",
@@ -561,7 +572,7 @@ module.exports = [{
 {
 	"identifier": "bsd",
 	"name": "bahamian dollar",
-	"type": "monetaryitemtype",
+	"type": "monetaryItemType",
 	"nsUnit": "http://www.xbrl.org/2003/iso4217",
 	"nsItemType": "http://www.xbrl.org/2003/instance",
 	"symbol": "$",

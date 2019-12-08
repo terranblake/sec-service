@@ -1,9 +1,10 @@
-const {
-    Identifiers,
-    filings,
-    companies,
-    facts,
-} = require('../models');
+const Identifiers = require('../models/identifiers');
+const filings = require('../models/filings');
+const filingDocuments = require('../models/filingDocuments');
+const companies = require('../models/companies');
+const identifiers = require('../models/identifiers');
+const facts = require('../models/facts');
+const moment = require('moment');
 
 module.exports.getFilingsIdentifierCoverage = async (ticker, filingType, threshold, startDate, endDate) => {
     if (!ticker || !filingType || !threshold || !startDate || !endDate) {
@@ -16,14 +17,14 @@ module.exports.getFilingsIdentifierCoverage = async (ticker, filingType, thresho
     const uniqueIdentifiers = await Identifiers.model.find({
         documentation: { $exists: true },
     }, {
-            name: 1,
-            _id: 1,
-            documentation: 1,
-        }).distinct('name');
+        name: 1,
+        _id: 1,
+        documentation: 1,
+    }).distinct('name');
 
     // find all filings by company and type
     // with a taxonomy extension
-    const filingsIdentifiers = await getAllFilingsByCompanyDateAndTypeWithExtension(company, filingType, startDate, endDate);
+    const filingsIdentifiers = await getAllFactsByFilingForCompanyByTypeAndDate(company, filingType, startDate, endDate);
     const companyFilings = Object.keys(filingsIdentifiers);
 
     let coverage = {};
@@ -54,17 +55,14 @@ module.exports.getFilingsIdentifierCoverage = async (ticker, filingType, thresho
 
 module.exports.getCoverageByCompanyAndIdentifier = async ({ filingType, startDate, endDate, identifiers, slim, threshold }) => {
     if (identifiers === 'all') {
-        identifiers = await Identifiers.model.find({});
-
-        identifiers = identifiers.reduce((acc, val) => {
-            acc.push(val.name)
-            return acc;
-        }, []);
+        identifiers = await Identifiers.model.find({}, { name: 1 }).distinct('name');
     } else {
-        identifiers = identifiers.split(',');
+        identifiers = Array.isArray(identifiers)
+            ? identifiers
+            : identifiers.split(',');
     }
 
-    if (!filingType || !startDate || !endDate || (Array.isArray(identifiers) && !identifiers.length)) {
+    if (!filingType || (Array.isArray(identifiers) && !identifiers.length)) {
         return { message: 'missing parameters' };
     }
 
@@ -75,7 +73,7 @@ module.exports.getCoverageByCompanyAndIdentifier = async ({ filingType, startDat
     let perIdentifiers;
     for (let company of allCompanies) {
         perIdentifiers = identifiers;
-        const filingsIdentifiers = await getAllFilingsByCompanyDateAndTypeWithExtension(company, filingType, startDate, endDate);
+        const filingsIdentifiers = await getAllFactsByFilingForCompanyByTypeAndDate(company, filingType, startDate, endDate);
         const companyFilings = Object.keys(filingsIdentifiers);
 
         // filter out companies without filings
@@ -86,7 +84,7 @@ module.exports.getCoverageByCompanyAndIdentifier = async ({ filingType, startDat
 
         filingIds = [...filingIds, ...companyFilings];
         Array.isArray(perIdentifiers) && perIdentifiers.reduce((acc, i) => {
-            let identifierCoverage = getIdentifierCoverageByFiling(filingsIdentifiers, i)
+            let identifierCoverage = getIdentifierCoverageByFiling(filingsIdentifiers, i);
             acc[i] = identifierCoverage;
 
             if (!aggregateResults[i]) {
@@ -113,7 +111,29 @@ module.exports.getCoverageByCompanyAndIdentifier = async ({ filingType, startDat
         }
     }
 
+    let identifierGrouping = {};
+    for (let name of Object.keys(aggregateResults)) {
+        const percent = aggregateResults[name].percent;
+        const aboveThreshold = Number(percent) >= Number(threshold);
+
+        if (!aboveThreshold) {
+            continue;
+        }
+
+        const [first] = await Identifiers.model.find({ name });
+        if (identifierGrouping[first.role.name]) {
+            if (aboveThreshold) {
+                identifierGrouping[first.role.name].push(name)
+            }
+        } else {
+            if (aboveThreshold) {
+                identifierGrouping[first.role.name] = [name];
+            }
+        }
+    }
+
     return {
+        identifierGrouping,
         coverage: slim
             ? Object.keys(aggregateResults).reduce((acc, val) => {
                 let percent = aggregateResults[val].percent;
@@ -133,7 +153,7 @@ module.exports.getCoverageByCompanyAndIdentifier = async ({ filingType, startDat
     };
 }
 
-module.exports.getCoverageByIdentifier = async (ticker, filingType, startDate, endDate, identifiers) => {
+module.exports.getCoverageByIdentifier = async ({ ticker, filingType, startDate, endDate, identifiers }) => {
     identifiers = identifiers.split(',');
 
     if (!ticker || !filingType || !startDate || !endDate || (Array.isArray(identifiers) && !identifiers.length)) {
@@ -141,7 +161,7 @@ module.exports.getCoverageByIdentifier = async (ticker, filingType, startDate, e
     }
 
     const company = await companies.model.findOne({ ticker });
-    const filingsIdentifiers = await getAllFilingsByCompanyDateAndTypeWithExtension(company, filingType, startDate, endDate);
+    const filingsIdentifiers = await getAllFactsByFilingForCompanyByTypeAndDate(company, filingType, startDate, endDate);
     const companyFilings = Object.keys(filingsIdentifiers);
 
     identifiers = identifiers.reduce((acc, i) => {
@@ -176,14 +196,15 @@ function getIdentifierCoverageByFiling(filingsIdentifiers, identifier) {
     };
 }
 
-async function getAllFilingsByCompanyDateAndTypeWithExtension(company, filingType, startDate, endDate) {
+async function getAllFactsByFilingForCompanyByTypeAndDate(company, filingType, start, end) {
     let companyFilings = await filings.model.find({
-        company: company._id,
+        company: company._id.toString(),
         type: filingType,
-        'taxonomyExtensions.0': { $exists: true },
-        filingDate: { $gt: startDate, $lt: endDate },
-    }).populate({ path: 'taxonomyExtensions' });
-    companyFilings = companyFilings.filter(f => f.taxonomyExtensions.length > 0);
+        publishedAt: {
+            $gt: start,
+            $lt: end
+        }
+    });
 
     let filingsIdentifiers = {};
     for (let filing in companyFilings) {

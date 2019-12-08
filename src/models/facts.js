@@ -22,10 +22,6 @@ const factSchema = new Schema({
         type: String,
         required: true,
     },
-    label: {
-        type: String,
-        required: true,
-    },
     date: {
         type: {
             type: String,

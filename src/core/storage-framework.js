@@ -1,5 +1,6 @@
 const Connection = require('./connection');
 const supportedImplementations = require('./implementations/supported');
+const { logs, errors } = require('../utils/logging');
 
 class StorageFramework {
 	get connections() {
@@ -15,7 +16,7 @@ class StorageFramework {
 		this.__connections = {};
 	}
 
-	initialize(callback) {
+	initialize() {
 		console.log('initializing storage framework');
 		for (let implementationName of this.__options) {
 			if (!supportedImplementations(implementationName)) {
@@ -24,7 +25,10 @@ class StorageFramework {
 
 			let connection = new Connection(implementationName);
 			connection.connect((err, res) => {
-				console.log({ err, res });
+				if (err) {
+					return errors({ message: `${implementationName} ${err.message}`, metadata: { implementationName } });
+				}
+				logs({ message: `${implementationName} connection established`, metadata: { implementationName } });
 				this.__connections[implementationName] = connection;
 			});
 		}

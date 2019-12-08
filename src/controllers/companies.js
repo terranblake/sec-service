@@ -1,6 +1,8 @@
-const { companies } = require('../models')();
-const { logs, errors } = require('../utils/logging');
+
 const request = require("request");
+
+const { logs, errors } = require('../utils/logging');
+const companies = require('../models/companies');
 
 module.exports.validationReducer = async (tickers) => {
     let found = [];
@@ -12,7 +14,6 @@ module.exports.validationReducer = async (tickers) => {
             found.push(company);
         } else {
             let metadata = await this.getMetadata(ticker);
-            metadata = JSON.parse(metadata);
 
             if (metadata && metadata.ticker === ticker) {
                 company = await companies.create(metadata);
@@ -48,7 +49,7 @@ module.exports.getMetadata = (identifier) => {
                     // check that this company doesn't exist
                     // create new company if it doesn't
                     // return the entire new company object
-                    resolve(data);
+                    resolve(JSON.parse(data));
                 });
             })
             .on('error', (err) => reject(err));

@@ -1,6 +1,6 @@
 const { model, Schema } = require('mongoose');
 const { errors } = require('../utils/logging');
-const { filingDocumentTypes, filingDocumentStatuses } = require('../utils/common-enums');
+const { filingDocumentTypes, itemStates } = require('../utils/common-enums');
 
 const filingDocumentSchema = new Schema({
   filing: {
@@ -20,8 +20,14 @@ const filingDocumentSchema = new Schema({
   },
   status: {
     type: String,
-    enum: filingDocumentStatuses,
+    enum: itemStates,
     required: true,
+  },
+  // helper field for qualifying a status. e.g. if downloaded, 
+  // there should be a local path or bucket id in this field
+  statusReason: {
+    type: String,
+    required: false,
   },
   sequenceNumber: String,
   fileName: String,
@@ -33,5 +39,12 @@ const filingDocumentSchema = new Schema({
   updatedAt: Date,
 });
 
+filingDocumentSchema.index({
+  filing: 1,
+  company: 1,
+  type: 1
+});
+
 const filingDocumentModel = model('FilingDocument', filingDocumentSchema)
+
 module.exports.model = filingDocumentModel;

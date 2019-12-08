@@ -49,7 +49,7 @@ companySchema.index({
     ticker: 1,
     exchange: 1,
     sic: 1
-}, { unique: true })
+}, { unique: true });
 
 const companyModel = model('Company', companySchema);
 module.exports.model = companyModel;
