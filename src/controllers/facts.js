@@ -2,7 +2,10 @@ const { readFile } = require('fs');
 const { parseString } = require('xml2js');
 const { promisify } = require('util');
 
+const { Graph } = require("@dagrejs/graphlib");
+
 const facts = require('../models/facts');
+const identifiers = require('../models/identifiers');
 const filingDocuments = require('../models/filingDocuments');
 
 const { logs, errors } = require('../utils/logging');
@@ -48,7 +51,7 @@ module.exports.parseFromFiling = async (filingId) => {
 
 		// format units
 		let rawUnits = elements["xbrli:unit"] || elements.unit;;
-		validUnits = await formatUnits(rawUnits, filingId, company);
+		validUnits = formatUnits(rawUnits);
 
 		if (!validUnits || Array.isArray(validUnits) && !validUnits.length) {
 			errors('no units returned from unit formatter. bailing!');
@@ -57,7 +60,7 @@ module.exports.parseFromFiling = async (filingId) => {
 
 		// TODO :: this probably won't work for everything
 		let rawContexts = elements['xbrli:context'] || elements.context;
-		let newContexts = await formatContexts(rawContexts, filingId, company);
+		let newContexts = await formatContexts(rawContexts);
 
 		// format facts
 		const newFacts = await formatFacts(elements, newContexts, validUnits, filingId, company);
@@ -69,4 +72,80 @@ module.exports.parseFromFiling = async (filingId) => {
 	}
 
 	return factIds;
+}
+
+module.exports.getChildren = async (filing, identifierName, roleName) => {
+	const rootIdentifiers = await identifiers.model.find({ depth: '0' }).lean();
+	if (!rootIdentifiers) {
+		return {};
+	}
+
+	const searchable = Object.assign([], rootIdentifiers);
+	const graph = new Graph();
+	const depths = [];
+
+	do {
+		const current = searchable.pop();
+
+		// set edge from depth to identifier name
+		graph.setEdge(current.depth, current.name);
+		
+		const foundFact = await facts.model.findOne({
+			name: current.name,
+			filing
+		}).lean();
+
+		if (!depths.includes(current.depth)) {
+			depths.push(current.depth);
+		}
+
+		const children = await identifiers.model.find({
+			role: current.role,
+			depth: current.depth + 1,
+			parent: current.name
+		}).lean();
+
+		if (Object.keys(children).length) {
+			graph.setNode(current.name, foundFact);
+		}
+		
+		for (let child of children) {
+			graph.setEdge(current.name, child.name);
+			searchable.push(child);
+		}
+	} while (searchable.length);
+
+	for (let identifier of rootIdentifiers) {
+		graph.setNode(identifier.name, identifier);
+		graph.setEdge('root', identifier.name);
+	}
+
+	let edges = graph.outEdges('root');
+	let toSearch = edges;
+
+	const depthEdges = {};
+	for (let depth of depths) {
+		if (depth === 6) {
+			logs(depth);
+		}
+
+		depthEdges[depth] = graph.outEdges(depth).map(e => e.w);
+	}
+
+	do {
+		const edge = toSearch.shift();
+
+		const node = graph.node(edge.w);
+		if (node) {
+			const depth = Object.keys(depthEdges).find(d => depthEdges[d].includes(edge.w));
+			logs(`${depth} ${'\t'.repeat(depth)} ${edge.w} ${node && node.value || ''}`);
+		}
+
+		edges = graph.outEdges(edge.w);
+		toSearch.unshift(...edges);
+
+
+	} while (toSearch.length);
+
+	return graph;
 }

@@ -7,17 +7,18 @@ const { loadCompaniesFromJson } = require('../utils/raw-data-helpers');
 const { logs } = require('../utils/logging');
 
 const companies = require('../models/companies');
-
-const { getMetadata } = require('../controllers/companies');
+const filings = require('../models/filings');
 
 const {
-    parseFromSourceByTickerAndType,
-    crawlByCompany: crawlFilingsByCompany
+    parseFilingRssFeed,
+    downloadByCompany: downloadFilingsByCompany
 } = require('../controllers/filings');
 const {
     downloadByCompany: downloadFilingDocumentsByCompany,
     crawlByCompany: crawlFilingDocumentsByCompany
 } = require('../controllers/filingDocuments');
+
+const { getMetadata } = require('../controllers/companies');
 
 router.post('/', async (req, res) => {
     const { path } = req.body;
@@ -69,18 +70,13 @@ router.get('/crawl/:companyId/filings', async (req, res) => {
     const { ticker } = await companies.model.findById(companyId);
 
     // fetch all filings for company
-    const result = await parseFromSourceByTickerAndType(source, [ticker], filingType);
-    const [filings] = Object.keys(result);
-    let crawledFilings = [];
+    await parseFilingRssFeed(source, [ticker], filingType);
 
-    if (filings.length) {
-        // todo:
-
-        crawledFilings = await crawlFilingsByCompany(companyId);
-        await downloadFilingDocumentsByCompany(companyId);
-        await crawlFilingDocumentsByCompany(companyId);
-    }
+    await downloadFilingsByCompany(companyId);
+    await downloadFilingDocumentsByCompany(companyId);
+    await crawlFilingDocumentsByCompany(companyId);
     
+    const crawledFilings = await filings.model.find({ status: 'crawled' });
     return res.status(200).send(crawledFilings);
 });
 

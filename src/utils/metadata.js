@@ -1,34 +1,24 @@
 const request = require('request');
+const config = require('config');
+const { promisify } = require('util');
+
+const requestAsync = promisify(request);
+
 const { logs } = require('../utils/logging');
 
-module.exports.getMetadata = (model, ticker, accessionNumber) => {
-	return new Promise((resolve, reject) => {
-        const config = require('config');
-        // TODO :: Add metadata-service to encrypted config
-        const metadataService = config.has('metadata-service.base') || 'http://localhost:5000';
-        const endpoint = `${metadataService}/${model}?ticker=${ticker}${accessionNumber && `&accessionNumber=${accessionNumber}`}`;
+module.exports.getMetadata = async (model, ticker, accessionNumber) => {
+    // TODO :: Add metadata-service to encrypted config
+    const metadataService = config.has('metadata-service.base') || 'http://localhost:5000';
 
-        let data = "";
-        request
-            .get(endpoint)
-            .on('response', (response) => {
-                logs(`retrieving metadata for ${accessionNumber}`);
-                response.on('data', (chunk) => {
-                    data += chunk;
-                });
+    accessionNumber = accessionNumber && `&accessionNumber=${accessionNumber}` || '';
+    const url = `${metadataService}/${model}?ticker=${ticker}${accessionNumber}`;
 
-                response.on('end', () => {
-                    logs(`retrieved metadata for ${accessionNumber}`);
-                    data = JSON.parse(data);
-                    resolve(data);
-                });
-            })
-            .on('error', (err) => reject(err));
-    });
+    const { body = {} } = await requestAsync({ method: 'GET', url, json: true });
+    return body;
 }
 
 module.exports.units = () => {
-	return new Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
         const config = require('config');
         // TODO :: Add metadata-service to encrypted config
         const metadataService = config.has('metadata-service.base') || 'http://localhost:5000';

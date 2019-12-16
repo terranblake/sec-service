@@ -25,10 +25,10 @@ router
         return res.status(200).send(result);
     })
     .post('/seed', async (req, res) => {
-        const { path, type } = req.body;
+        const { path, type, version } = req.body;
 
         logs(`seeding ${type} from json`);
-        const seeds = await seedTree(path, type);
+        const seeds = await seedTree(path, type, version);
 
         res.status(200).send(seeds);
     })

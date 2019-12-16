@@ -3,14 +3,16 @@ const { map, reduce } = require('lodash');
 const { series } = require('async');
 const request = require("request");
 const { parseString } = require('xml2js');
+const { promisify } = require('util');
 
 const identifiers = require('../models/identifiers');
 const companies = require('../models/companies');
 const filings = require('../models/filings');
 
-const { getMetadata } = require('../utils/metadata');
+const { getMetadata } = require('./metadata');
 const { filingDocumentTypes } = require('./common-enums');
-const { logs, warns } = require('../utils/logging');
+const { logs, errors } = require('./logging');
+const { workbookFormatters } = require('./workbook-helpers');
 
 module.exports.formatFilingBySource = (source, filingObj, company) => ({
     'sec': {
@@ -41,70 +43,11 @@ const extractDefitionObjectFromString = (definition) => {
     };
 }
 
-module.exports.formatRawIdentifiers = (rawIdentifiers, extensionType) => {
+module.exports.formatWorkbookByVersion = (rawObjects, extensionType, version) => {
     extensionType = extensionType.toLowerCase();
-    // identifierSchema = identifiers.model.schema.obj;
+    const formatter = workbookFormatters[version];
 
-    rawIdentifiers = map(rawIdentifiers, (identifier) => {
-        // TODO :: Build out processor to handle every sheet
-        //          in the taxonomy declaration documents
-        // Use the following to remove all invalid properties
-        // after switch statement formatters
-        /*
-            for (property in identifier) {
-                if (!Object.keys(rawIdentifierschema).includes(property)) {
-                    delete identifier[property]
-                }
-            }
-        */
-
-        switch (extensionType) {
-            // has most of the important rawIdentifiers
-            case 'calculation':
-                const extendedLinkRole = identifier['extended link role'];
-                const [roleType, roleName] = extendedLinkRole.split('/').slice(-2);
-
-                return {
-                    documentType: extensionType,
-                    extendedLinkRole: identifier['extended link role'],
-                    role: {
-                        type: roleType,
-                        name: roleName
-                    },
-                    definition: identifier['definition'],
-                    prefix: identifier['prefix'],
-                    name: identifier['name'],
-                    label: identifier['label'],
-                    depth: identifier['depth'],
-                    order: identifier['order'],
-                    weight: identifier['weight'],
-                    parent: identifier['parent'],
-                    itemType: identifier['item type'] || 'monetaryItemType'
-                };
-            // in depth definitions and supplementary information
-            //  about each identifier e.g. documentation, type, periodType, etc.
-            case 'elements':
-                unitType = identifier.type && identifier.type.split(':')[1];
-                // identifier.unitType = unitType && unitType.toLowerCase();
-
-                // todo: validate the correct unitType is being found and
-                //          not some random one that we don't need
-
-                identifier.documentType = extensionType,
-                identifier.abstract = identifier.abstract === 'true';
-                identifier.itemType = identifier['item type'] || 'monetaryItemType'
-
-                for (property in identifier) {
-                    if (!Object.keys(identifierSchema).includes(property)) {
-                        delete identifier[property]
-                    }
-                }
-
-                return identifier;
-        }
-    })
-
-    return rawIdentifiers;
+    return map(rawObjects, formatter(identifier));;
 }
 
 module.exports.formatFilingDocuments = async (filingsDocuments, company, filing) =>
@@ -117,7 +60,7 @@ module.exports.formatFilingDocuments = async (filingsDocuments, company, filing)
 
         const documentType = description && filingDocumentTypes.find(type => new RegExp(type).test(description.toLowerCase()));
         if (!documentType) {
-            warns(`invalid document type from description ${description} filing ${filing}`);
+            errors(`invalid document type from description ${description} filing ${filing}`);
             return acc;
         }
 
@@ -145,13 +88,13 @@ module.exports.scrapeFilingFromRssItem = async (source, rawRssItem) => {
     let foundCompany = await companies.model.find({ refId: cik });
     if (!foundCompany) {
         foundCompany = await getMetadata('companies', cik);
-        warns('skipping filing processing until ticker to cik conversion is stable');
+        errors('skipping filing processing until ticker to cik conversion is stable');
         return false;
     }
 
     const foundFiling = await filings.model.find({ company: foundCompany._id, accessionNumber });
     if (Array.isArray(foundFiling) && foundFiling.length) {
-        warns(`duplicate filing company ${foundCompany.ticker} cik ${cik} accessionNumber ${accessionNumber}. bailing!`);
+        errors(`duplicate filing company ${foundCompany.ticker} cik ${cik} accessionNumber ${accessionNumber}. bailing!`);
         return false;
     }
 
@@ -159,57 +102,51 @@ module.exports.scrapeFilingFromRssItem = async (source, rawRssItem) => {
     return filing;
 }
 
-module.exports.scrapeFilingFromSec = (rssItem, company) => {
-    return new Promise((resolve, reject) => {
-        let filing = {}
-        let accessionNumber
-        let { ticker, _id } = company;
+module.exports.parseXmlString = promisify(parseString);
 
-        series([
-            function parseRssItem(next) {
-                parseString(rssItem.content, (err, result) => {
-                    if (err) {
-                        console.error(`there was a problem parsing rss item for company ${company._id}`);
-                        return false;
-                    }
+module.exports.parseRssEntry = async (rssEntry, accessionNumber, company) => {
+    let filing = {}
+    let { ticker, _id } = company;
 
-                    accessionNumber = result.div['accession-nunber'][0];
-                    next();
-                })
-            },
-            function getFilingMetadata(next) {
-                getMetadata('filings', ticker, accessionNumber)
-                    .then((filingMetadata) => {
-                        filing = {
-                            company: _id,
-                            publishedAt: moment(rssItem.pubDate).format(),
-                            ...filingMetadata
-                        }
-                        filing.fiscalYearEnd = moment(filing.fiscalYearEnd, 'MMYY').format();
-                        console.log({ filing });
+    // const { div: parsedRssEntry } = await this.parseXmlString(rssEntry.content);
+    const filingMetadata = await getMetadata('filings', ticker, accessionNumber);
 
-                        next();
-                    });
-            }
-        ], (err, result) => {
-            if (err) {
-                return reject(err);
-            }
+    filing = {
+        company: _id,
+        publishedAt: moment(rssEntry.pubDate).format(),
+        fiscalYearEnd: moment(filingMetadata.fiscalYearEnd, 'MMYY').format(),
+        ...filingMetadata
+    }
 
-            return resolve(filing);
-        })
-    })
+    return filing;
 }
 
 module.exports.loadCompaniesFromJson = async (path, next) => {
     require('fs').readFile(path, (err, res) => next(JSON.parse(res)));
 }
 
-module.exports.loadIdentifiersFromSheet = async (path, sheet, next) => {
-    return require('./xlsx').parse(path, sheet, next);
+module.exports.getRawWorkbookObjects = async (filePath, sheetName) => {
+    const hrstart = process.hrtime();
+    sheetName = sheetName.charAt(0).toUpperCase() + sheetName.slice(1);
+
+    logs(`loading workbook ${sheetName} ${filePath}`);
+    const workbook = XLSX.readFile(filePath);
+
+    logs(`loaded workbook ${filePath}`);
+
+    const sheetList = workbook.SheetNames;
+    logs(`found the following sheets ${sheetList}`);
+
+    workbookIndex = sheetList.indexOf(sheetName);
+    workbookJson = XLSX.utils.sheet_to_json(workbook.Sheets[sheet_name_list[workbookIndex]]);
+
+    const hrend = process.hrtime(hrstart)
+    logs(`loaded workbook in ${hrend[0]}s ${hrend[1] / 1000000}ms`);
+
+    return workbookJson;
 }
 
-module.exports.createTaxonomyTree = async (tree) => {
+module.exports.createTaxonomyTree = async (tree, version) => {
     const topLevelIdentifiers = [];
     const sortedTree = sortTree(tree);
     logs('finished sorting tree');
@@ -218,6 +155,7 @@ module.exports.createTaxonomyTree = async (tree) => {
     let depthC = 0;
     for (let identifier of sortedTree) {
         const { depth, definition, name, parent } = identifier;
+        identifier.version = version;
 
         if (depth > depthC) {
             logs(`creating depth ${depthC} leaves`);
@@ -232,11 +170,9 @@ module.exports.createTaxonomyTree = async (tree) => {
         }
 
         const parentIdentifierName = parent && parent.split(':').pop();
-        const parentIdentifier = await identifiers.findParentIdentifier(depth, parentIdentifierName, roleId);
-        
-        if (parentIdentifier) {
-            logs(`found parent identifier for ${name} depth ${depth - 1} parent ${identifier.parent}`);
-            identifier.parent = parentIdentifier;
+        if (parentIdentifierName) {
+            logs(`found parent identifier for ${name} depth ${depth - 1} parent ${identifier.parentIdentifierName}`);
+            identifier.parent = parentIdentifierName;
         }
 
         logs(`creating identifier ${identifier.name}`);

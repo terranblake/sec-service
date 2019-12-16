@@ -73,9 +73,8 @@ const identifierSchema = new Schema({
         required: false,
     },
     parent: {
-        type: Schema.Types.ObjectId,
-        ref: 'Identifier',
-        required: false,
+        type: String,
+        require: false
     },
     periodType: {
         type: String,
@@ -131,9 +130,16 @@ module.exports.findByDepth = async (depth) => {
         .catch(errors);
 }
 
-module.exports.findParentIdentifier = async (depth, parent, roleId) => {
+module.exports.findParentIdentifier = async (depth, parent, roleId, version) => {
+    const query = {
+        depth: depth - 1,
+        name: parent,
+        'role.id': roleId,
+        version
+    };
+
     return await identifierModel
-        .findOne({ depth: depth - 1, name: parent, 'role.id': roleId }, { _id: 1 })
+        .findOne(query, { _id: 1 })
         .then((identifier) => {
             if (identifier) {
                 return identifier;

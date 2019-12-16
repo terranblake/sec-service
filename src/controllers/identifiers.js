@@ -1,24 +1,26 @@
 const {
-    loadIdentifiersFromSheet,
-    formatRawIdentifiers,
+    getRawWorkbookObjects,
+    formatWorkbookByVersion,
     createTaxonomyTree,
 } = require('../utils/raw-data-helpers');
 
 const { filingDocumentTypes } = require('../utils/common-enums');
 const { logs } = require('../utils/logging');
 
-module.exports.seedTree = async (path, documentType) => {
+module.exports.seedTree = async (path, documentType, version) => {
     let result = {};
     const isValid = isValidType(documentType);
+
+    // extracts workbook objects from xlsx, then orders the
+    // object 
+    let objects = await getRawWorkbookObjects(path, version);
 
     const seedDocumentTypes = isValid && [documentType] || filingDocumentTypes;
     logs(`seeing identifiers from the following document types: ${seedDocumentTypes.join(', ')}`);
 
     for (let type of seedDocumentTypes) {
-        let identifiers = await loadIdentifiersFromSheet(path, type);
-        identifiers = formatRawIdentifiers(identifiers, type);
-
-        const topLevelIdentifiers = await createTaxonomyTree(identifiers);
+        identifiers = formatWorkbookByVersion(objects, type, version);
+        const topLevelIdentifiers = await createTaxonomyTree(identifiers, version);
         result[type] = topLevelIdentifiers;
     }
 

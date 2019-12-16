@@ -68,7 +68,15 @@ module.exports.downloadByCompany = async (company) => {
 }
 
 module.exports.downloadById = async (filingDocumentId, filePath) => {
-	const { _id, fileName, fileUrl, company, filing } = await filingDocuments.model.findById(filingDocumentId);
+	const document = await filingDocuments.model.findById(filingDocumentId);
+	const { _id, fileName, fileUrl, company, filing, status } = document;
+
+	// is the document in a downloaded status and the file exists
+	if (['downloaded', 'downloading'].includes(status) && existsSync(filePath)) {
+		logs(`skipping previously downloaded filingDocument ${_id} company ${company} filing ${filing}`);
+		return document;
+	}
+
 	await filingDocuments.model.findOneAndUpdate({ _id: _id }, { status: 'downloading' });
 	logs(`starting download filingDocument ${_id} to local archive company ${company} filing ${filing}`);
 
@@ -133,14 +141,14 @@ module.exports.crawlById = async (filingDocumentId) => {
 	const { fileUrl, company, status, statusReason, _id, filing } = document;
 	let elements;
 
-	// common crawling pattern. checking current status if the
-	// item has already been crawled or is currently being crawled
-	if (status === 'crawling' || status === 'crawled') {
-		throw new Error(`skipping crawling filingDocument ${_id} for ${company._id} because filingDocument is being crawled or was already crawled`);
-	}
+	// // common crawling pattern. checking current status if the
+	// // item has already been crawled or is currently being crawled
+	// if (status === 'crawling' || status === 'crawled') {
+	// 	throw new Error(`skipping crawling filingDocument ${_id} for ${company._id} because filingDocument is ${status}`);
+	// }
 
 	// read from local archive if exists
-	if (status === 'downloaded' && statusReason) {
+	if (['downloaded', 'crawled'].includes(status)) {
 		logs(`filingDocument ${_id} loaded from local archive since it has been downloaded company ${company} filing ${filing}`);
 		elements = await readFileAsync(statusReason);
 		// otherwise download the document again
@@ -155,7 +163,7 @@ module.exports.crawlById = async (filingDocumentId) => {
 	await filingDocuments.model.findOneAndUpdate({ _id: document._id }, { status: 'crawling' });
 
 	let rawUnits = elements["xbrli:unit"] || elements.unit;;
-	validUnits = await formatUnits(rawUnits, filing, company);
+	validUnits = await formatUnits(rawUnits);
 
 	if (!validUnits || Array.isArray(validUnits) && !validUnits.length) {
 		throw new Error('no units returned from unit formatter. bailing!');
@@ -164,7 +172,7 @@ module.exports.crawlById = async (filingDocumentId) => {
 	// contexts are objects that define a segmented portions of a
 	// gaap identifier value. e.g. countries/regions
 	const rawContexts = elements['xbrli:context'] || elements.context;
-	const newContexts = await formatContexts(rawContexts, filing, company);
+	const newContexts = await formatContexts(rawContexts);
 
 	const newFacts = await formatFacts(elements, newContexts, validUnits, filing, company);
 	for (let fact of newFacts) {

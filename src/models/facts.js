@@ -1,6 +1,5 @@
 const { model, Schema } = require('mongoose');
-const { errors } = require('../utils/logging');
-const { dateTypes, itemTypes } = require('../utils/common-enums');
+const { dateTypes, itemTypes, identifierPrefixes } = require('../utils/common-enums');
 
 const factSchema = new Schema({
     filing: {
@@ -13,15 +12,30 @@ const factSchema = new Schema({
         ref: 'Company',
         required: true
     },
-    identifier: {
-        type: Schema.Types.ObjectId,
-        ref: 'Identifier',
-        required: true,
-    },
     name: {
         type: String,
         required: true,
     },
+    // used for facts which have a segment element defined in the
+    // context that the fact references
+    segment: [{
+        // the dimension property of the explicitMember element
+        dimension: {
+            prefix: {
+                type: String,
+                enum: identifierPrefixes
+            },
+            name: String
+        },
+        // the value property of the explicitMember element
+        value: {
+            prefix: {
+                type: String,
+                enum: identifierPrefixes
+            },
+            name: String
+        }
+    }],
     date: {
         type: {
             type: String,

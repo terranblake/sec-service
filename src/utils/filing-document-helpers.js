@@ -7,27 +7,33 @@ const util = require('util');
 
 module.exports.formatFacts = async (unformattedFacts, contexts, units, filing, company) => {
     let expandedFacts = [];
-    
+
     for (let fact in unformattedFacts) {
         // we only want facts we can process
-        if (identifierPrefixes.find(p => fact.includes(p))) {
-            // console.log({ fact, unformatted: unformattedFacts[fact] });
-            identifierName = fact.substr(fact.indexOf(':') + 1);
-            let matchedIdentifiers = await identifiers.model.find({ name: identifierName });
-            matchedIdentifiers = matchedIdentifiers.map(i => i._id);
+        if (!identifierPrefixes.find(p => fact.includes(p))) {
+            errors(`no valid prefix found for fact grouping ${fact}`);
+            continue;
+        }
 
-            // we only want facts we have a matching identifier for
-            if (Array.isArray(matchedIdentifiers) && matchedIdentifiers.length) {
+        identifierName = fact.substr(fact.indexOf(':') + 1);
+        let matchedIdentifiers = await identifiers.model.find({ name: identifierName });
+        matchedIdentifiers = matchedIdentifiers.map(i => i._id);
 
-                const likeFacts = await expandAndFormatLikeFacts(unformattedFacts[fact], contexts, units, filing, company, matchedIdentifiers, identifierName);
-                likeFacts && likeFacts.forEach((formatted) => {
-                    expandedFacts.push(formatted);
-                });
-            } else {
-                warns(`no identifier found for ${fact} company ${company} filing ${filing}`);
+        if (!Array.isArray(matchedIdentifiers) || !matchedIdentifiers.length) {
+            errors(`no identifier found for ${fact} company ${company} filing ${filing}`);
+            continue;
+        }
+
+        const likeFacts = await expandAndFormatLikeFacts(unformattedFacts[fact], contexts, units, filing, company, matchedIdentifiers, identifierName);
+        if (!likeFacts.length) {
+            if (fact.includes('gaap')) {
+                logs(`identifier with name ${identifierName} was a gaap identifier with no valid facts`);
             }
-        } else {
-            warns(`no valid prefix found for fact grouping ${fact}`);
+            continue;
+        }
+
+        for (let formatted of likeFacts) {
+            expandedFacts.push(formatted);
         }
     }
 
@@ -36,21 +42,19 @@ module.exports.formatFacts = async (unformattedFacts, contexts, units, filing, c
 
 async function expandAndFormatLikeFacts(facts, contexts, units, filing, company, identifiers, identifierName) {
     let updatedFacts = [];
-    
+
     for (let fact of facts) {
-        const { unitRef } = await normalizeFact(fact);
-        unit = await units.find(u => u.identifier === unitRef);
+        const { unitRef, contextRef, value, signum } = await normalizeFact(fact);
+
+        const unit = await units.find(u => u.identifier === unitRef || (factCurrencies.map(c => c.toLowerCase()).includes(unitRef.toLowerCase()) && u.identifier === 'usd'));
         if (!unit) {
-            warns(`missing unit for fact identifier ${identifierName} filing ${filing}`);
+            errors(`missing unit for fact identifier ${identifierName} unitRef ${unitRef} filing ${filing}`);
             continue;
         }
 
-        const context = contexts.find(c =>
-            c.company === company.toString()
-            && c.label === contextRef
-        );
-        
+        const context = contexts.find(c => c.label === contextRef);
         if (!context) {
+            errors(`missing context for fact identifier ${identifierName} unitRef ${unitRef} filing ${filing}`);
             continue;
         }
 
@@ -61,11 +65,12 @@ async function expandAndFormatLikeFacts(facts, contexts, units, filing, company,
             name: identifierName,
             date: context.date,
             itemType: unit.type,
-            value: fact.value,
+            value,
+            segment: context.segment,
             label: fact.label || fact.name,
-            // TODO :: Get balance for facts (debit, credit)
+            // todo :: Get balance for facts (debit, credit)
             // balance: context.balance,
-            sign: unit.signum === '+',
+            sign: signum === '+',
         };
 
         if (!fact.filing) {
@@ -101,76 +106,71 @@ function normalizeFact(fact) {
     }
 }
 
-module.exports.formatUnits = async (extensionUnits, filing, company) => {
+module.exports.formatUnits = (rawUnits) => {
     let formattedUnits = []
-    for (let unit in extensionUnits) {
-        unit = extensionUnits[unit];
-        id = unit.$.id;
+    for (let rawUnit of rawUnits) {
+        const name = rawUnit.$.id;
 
-        other = unit['xbrli:measure'] ||
-            unit.measure ||
-            unit.divide;
-        other = other && other[0];
+        const rawCalcType = Object.keys(rawUnit).find(u => u.includes('xbrli:'));
+        const type = rawCalcType && rawCalcType.split(':').length
+            ? rawCalcType.split(':')[1]
+            : 'measure';
 
-        const otherType = typeof other;
-        if (otherType === 'object') {
-            // TODO :: Properly handle pure(percentage) units
+        let unit = rawUnit[rawCalcType];
+        let formattedUnit = {
+            name,
+            type,
+            calculation: []
+        };
 
-            // TODO :: Properly process units which have a numerator and denominator
-            // This is likely a numerator/denomiator unit with additional calculation
-            // Skipping until this data is relevant and can be used
-
-            warns(`skipping calculation step unit ${id} filing ${filing} company ${company}`);
-            continue;
-        } else if (otherType !== 'string') {
-            warns(`invalid other type [${otherType}] for unit ${id} filing ${filing} company ${company}`);
-            continue;
-        }
-
-        const unitIdentifiers = supportedUnits.map(s => s.identifier);
-
-        // TODO :: Handle this more elegantly. it doesn't account for other iso variants
-        //          and only returns a single value
-        unitId = unit['$'].id.replace('iso4217_', '').toLowerCase();
-        const foundUnit = supportedUnits.find(u => u.identifier === unitId);
-        if (foundUnit || factCurrencies.includes(other)) {
-            logs(`found unit with matching identifier ${unitId}`);
-            formattedUnits.push(foundUnit);
+        if (type === 'measure') {
+            const [prefix, name] = unit[0].split(':');
+            formattedUnit.calculation = [{ prefix, name }];
         } else {
-            warns(`skipping unsupported unit ${unitId} filing ${filing} company ${company.name}`);
+            // only do this if the unit type isn't a simple measure calculation
+            unit = unit[0];
+            for (let item of Object.keys(unit)) {
+                item = unit[item];
+                const [prefix, name] = item[0]['xbrli:measure'][0].split(':');
+                formattedUnit.calculation.push({ prefix, name });
+            }
         }
+
+        formattedUnits.push(formattedUnit);
     }
 
-    return formattedUnits.filter(u => u && u.identifier);
+    return formattedUnits;
 }
 
 module.exports.formatContexts = async (extensionContexts, filing, company) => {
     let formattedContexts = [];
     for (let context of extensionContexts) {
-        let entity = (context["xbrli:entity"] || context.entity)[0];
-        let segments = (entity["xbrli:segment"] || entity.segment);
-        if (segments && segments.length) {
-            continue;
+        const entity = (context["xbrli:entity"] || context.entity)[0];
+        const period = (context["xbrli:period"] || context.period)[0];
+
+        // todo: confirm if there can be more than 1 segment defined for
+        // a single context object. hard exit if so, to make it obvious
+        // that something needs to be addressed
+        const rawSegment = (entity["xbrli:segment"] || entity.segment);
+        if (rawSegment && rawSegment.length > 1) {
+            errors(`more than 1 segment found for filing ${filing._id} company ${company._id}. bailing!`);
+            process.exit(1);
         }
 
-        members = getContextMembers(filing, company, segments);
-
-        const period = (context["xbrli:period"] || context.period)[0];
-        let date = getContextDate(period);
-
+        const segment = rawSegment && formatContextSegment(rawSegment[0]);
         formattedContexts.push({
             label: context['$'].id,
             filing,
             company,
-            members,
-            date,
+            segment,
+            date: formatContextDate(period),
         });
     }
 
     return formattedContexts;
 }
 
-function getContextDate(contextPeriod) {
+function formatContextDate(contextPeriod) {
     if (contextPeriod) {
         const dateType = Object.keys(contextPeriod)[0].includes('instant') ? 'instant' : 'series';
 
@@ -187,28 +187,33 @@ function getContextDate(contextPeriod) {
     }
 }
 
-function getContextMembers(filing, company, members = []) {
+function formatContextSegment(segment = {}) {
+    if (!segment['xbrldi:explicitMember']) {
+        console.error(`missing explicitMember`);
+        process.exit(1);
+    }
+
+    const members = segment['xbrldi:explicitMember'];
     if (!members.length) {
         return members;
     }
 
-    members = members[0];
+    let formattedSegment = [];
+    for (let dimension of members) {
+        const valueSplit = dimension._.split(':');
+        const dimensionSplit = dimension.$.dimension.split(':');
 
-    if (!members["xbrldi:explicitMember"] && !members['_'] && !members.explicitMember) {
-        console.log('invalid members', util.inspect({ members }));
-        warns(`explicit member key does not exist for this context company ${company} filing ${filing}`);
+        formattedSegment.push({
+            value: {
+                prefix: valueSplit[0],
+                name: valueSplit[1]
+            },
+            dimension: {
+                prefix: dimensionSplit[0],
+                name: dimensionSplit[1]
+            }
+        })
     }
 
-    newMembers = [];
-    members = members["xbrldi:explicitMember"] || members.explicitMember || members;
-
-    if (Array.isArray(members)) {
-        members.forEach((member) => {
-            newMembers.push({ value: member["_"], gaapDimension: member['$'].dimension });
-        });
-    } else {
-        newMembers.push({ value: members["_"], gaapDimension: members['$'].dimension });
-    }
-
-    return newMembers;
+    return formattedSegment;
 }
