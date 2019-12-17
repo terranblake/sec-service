@@ -41,6 +41,6 @@ module.exports = {
     factCurrencies: ['USD', 'iso4217_USD', 'iso4217-usd', 'usd', 'U_iso4217USD', 'iso4217:USD'],
     // http://www.xbrl.org/utr/2017-07-12/utr.xml
     itemTypes: ['monetaryItemType', 'durationItemType', 'stringItemType', 'textItemType'],
-    dateTypes: ['series', 'instant'],
+    dateTypes: ['quarter', 'year', 'month', 'instant'],
     exchanges: ['nasdaq', 'nyse', 'otc', 'otcbb', 'bats', 'nyse mkt', 'nyse arca', null],
 }

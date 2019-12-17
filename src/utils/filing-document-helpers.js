@@ -1,9 +1,18 @@
+const util = require('util');
+const moment = require('moment');
+
 const identifiers = require('../models/identifiers');
-const { identifierPrefixes, factCurrencies } = require('./common-enums');
+
 const { logs, errors, warns } = require('./logging');
 const { magnitude, signum } = require('.');
 const supportedUnits = require('./supported-units');
-const util = require('util');
+
+const { identifierPrefixes, factCurrencies } = require('./common-enums');
+const {
+    getDateType,
+    getYearReported,
+    getQuarterReported
+} = require('./date-helpers');
 
 module.exports.formatFacts = async (unformattedFacts, contexts, units, filing, company) => {
     let expandedFacts = [];
@@ -46,7 +55,7 @@ async function expandAndFormatLikeFacts(facts, contexts, units, filing, company,
     for (let fact of facts) {
         const { unitRef, contextRef, value, signum } = await normalizeFact(fact);
 
-        const unit = await units.find(u => u.identifier === unitRef || (factCurrencies.map(c => c.toLowerCase()).includes(unitRef.toLowerCase()) && u.identifier === 'usd'));
+        const unit = await units.find(u => u.identifier === unitRef || (factCurrencies.map(c => c.toLowerCase()).includes(unitRef.toLowerCase()) || u.identifier === 'usd'));
         if (!unit) {
             errors(`missing unit for fact identifier ${identifierName} unitRef ${unitRef} filing ${filing}`);
             continue;
@@ -157,13 +166,15 @@ module.exports.formatContexts = async (extensionContexts, filing, company) => {
             process.exit(1);
         }
 
+        const date = formatContextDate(period);
         const segment = rawSegment && formatContextSegment(rawSegment[0]);
+
         formattedContexts.push({
             label: context['$'].id,
             filing,
             company,
             segment,
-            date: formatContextDate(period),
+            date,
         });
     }
 
@@ -171,20 +182,25 @@ module.exports.formatContexts = async (extensionContexts, filing, company) => {
 }
 
 function formatContextDate(contextPeriod) {
-    if (contextPeriod) {
-        const dateType = Object.keys(contextPeriod)[0].includes('instant') ? 'instant' : 'series';
-
-        return {
-            type: dateType,
-            value:
-                dateType === 'instant'
-                    ? new Date((contextPeriod["xbrli:instant"] || contextPeriod.instant)[0])
-                    : {
-                        startDate: new Date(contextPeriod["xbrli:startDate"] || contextPeriod.startDate),
-                        endDate: new Date(contextPeriod["xbrli:endDate"] || contextPeriod.endDate)
-                    }
-        };
+    if (!contextPeriod) {
+        throw new Error('context period is missing');
     }
+    const rawDateType = Object.keys(contextPeriod)[0].includes('instant') ? 'instant' : 'series';
+    const value = rawDateType === 'instant'
+        ? new Date((contextPeriod["xbrli:instant"] || contextPeriod.instant)[0])
+        : {
+            startDate: new Date(contextPeriod["xbrli:startDate"][0] || contextPeriod.startDate),
+            endDate: new Date(contextPeriod["xbrli:endDate"][0] || contextPeriod.endDate)
+        };
+
+    const type = getDateType(value);
+    return {
+        type,
+        value,
+        quarter: getQuarterReported(value, type),
+        year: getYearReported(value, type)
+    };
+
 }
 
 function formatContextSegment(segment = {}) {

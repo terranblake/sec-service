@@ -58,7 +58,7 @@ module.exports.parseFromFiling = async (filingId) => {
 			return;
 		}
 
-		// TODO :: this probably won't work for everything
+		// todo: this probably won't work for every 
 		let rawContexts = elements['xbrli:context'] || elements.context;
 		let newContexts = await formatContexts(rawContexts);
 

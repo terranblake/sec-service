@@ -1,5 +1,10 @@
 const { model, Schema } = require('mongoose');
-const { dateTypes, itemTypes, identifierPrefixes } = require('../utils/common-enums');
+const {
+    dateTypes,
+    dateSubTypes,
+    itemTypes, 
+    identifierPrefixes
+} = require('../utils/common-enums');
 
 const factSchema = new Schema({
     filing: {
@@ -23,7 +28,7 @@ const factSchema = new Schema({
         dimension: {
             prefix: {
                 type: String,
-                enum: identifierPrefixes
+                // enum: identifierPrefixes
             },
             name: String
         },
@@ -31,7 +36,7 @@ const factSchema = new Schema({
         value: {
             prefix: {
                 type: String,
-                enum: identifierPrefixes
+                // enum: identifierPrefixes
             },
             name: String
         }
@@ -42,6 +47,13 @@ const factSchema = new Schema({
             enum: dateTypes,
             required: true,
         },
+        quarter: {
+            type: Number,
+            enum: [1, 2, 3, 4],
+        },
+        year: {
+            type: String,
+        },
         value: {
             type: Schema.Types.Mixed,
             required: true,
@@ -49,7 +61,7 @@ const factSchema = new Schema({
     },
     itemType: {
         type: String,
-        enum: itemTypes,
+        // enum: itemTypes,
         required: true,
     },
     balance: String,
