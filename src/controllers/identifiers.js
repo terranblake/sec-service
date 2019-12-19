@@ -7,13 +7,12 @@ const {
 const { filingDocumentTypes } = require('../utils/common-enums');
 const { logs } = require('../utils/logging');
 
-module.exports.seedTree = async (path, documentType, version) => {
+module.exports.crawlTaxonomyXlsxSheet = async (path, sheet, version) => {
     let result = {};
-    const isValid = isValidType(documentType);
-
-    // extracts workbook objects from xlsx, then orders the
-    // object 
-    let objects = await getRawWorkbookObjects(path, version);
+    // todo: determine document type from available fields in sheet being parsed
+    // todo: store raw workbook objects that are less io heavy; should help
+    // with load times when reparsing workbooks
+    let objects = await getRawWorkbookObjects(path, sheet);
 
     const seedDocumentTypes = isValid && [documentType] || filingDocumentTypes;
     logs(`seeing identifiers from the following document types: ${seedDocumentTypes.join(', ')}`);
@@ -26,5 +25,3 @@ module.exports.seedTree = async (path, documentType, version) => {
 
     return result;
 }
-
-const isValidType = (documentType) => filingDocumentTypes.includes(documentType && documentType.toLowerCase())

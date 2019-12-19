@@ -4,6 +4,7 @@ const { series } = require('async');
 const request = require("request");
 const { parseString } = require('xml2js');
 const { promisify } = require('util');
+const xlsx = require('xlsx');
 
 const identifiers = require('../models/identifiers');
 const companies = require('../models/companies');
@@ -47,7 +48,10 @@ module.exports.formatWorkbookByVersion = (rawObjects, extensionType, version) =>
     extensionType = extensionType.toLowerCase();
     const formatter = workbookFormatters[version];
 
-    return map(rawObjects, formatter(identifier));;
+    // todo: move all objects within scope of the formatter since
+    // some versions of workbooks are going to require a current
+    // role name since there isn't a guaranteed column for that data
+    return map(rawObjects, formatter(identifier));
 }
 
 module.exports.formatFilingDocuments = async (filingsDocuments, company, filing) =>
@@ -125,20 +129,25 @@ module.exports.loadCompaniesFromJson = async (path, next) => {
     require('fs').readFile(path, (err, res) => next(JSON.parse(res)));
 }
 
-module.exports.getRawWorkbookObjects = async (filePath, sheetName) => {
+module.exports.getRawWorkbookObjects = async (path, sheet) => {
     const hrstart = process.hrtime();
-    sheetName = sheetName.charAt(0).toUpperCase() + sheetName.slice(1);
 
-    logs(`loading workbook ${sheetName} ${filePath}`);
-    const workbook = XLSX.readFile(filePath);
+    logs(`loading workbook ${sheet} ${path}`);
+    const workbook = xlsx.readFile(path);
 
-    logs(`loaded workbook ${filePath}`);
+    logs(`loaded workbook ${path}`);
 
-    const sheetList = workbook.SheetNames;
-    logs(`found the following sheets ${sheetList}`);
+    const sheets = workbook.SheetNames;
 
-    workbookIndex = sheetList.indexOf(sheetName);
-    workbookJson = XLSX.utils.sheet_to_json(workbook.Sheets[sheet_name_list[workbookIndex]]);
+    const sheetRegex = new RegExp(sheet, 'i');
+    const matchedSheet = sheets.find(s => sheetRegex.test(s));
+
+    if (!matchedSheet) {
+        throw `no sheet found that matches the provided sheet name. please try again!`;
+    }
+
+    workbookIndex = sheets.indexOf(matchedSheet);
+    workbookJson = xlsx.utils.sheet_to_json(workbook.Sheets[matchedSheet]);
 
     const hrend = process.hrtime(hrstart)
     logs(`loaded workbook in ${hrend[0]}s ${hrend[1] / 1000000}ms`);

@@ -34,7 +34,7 @@ router.post('/', async (req, res) => {
     });
 });
 
-router.get('/:ticker', async (req, res) => {
+router.get('/', async (req, res) => {
     const { params = {} } = req;
     const { ticker } = params;
 
@@ -54,13 +54,13 @@ router.get('/:ticker', async (req, res) => {
     });
 })
 
-router.get('/crawl/:ticker/filings', async (req, res) => {
-    const { ticker } = req.params;
+router.get('/crawl/filings', async (req, res) => {
     const {
         source = 'sec',
         // todo: validate filingTypes at some point in the pipeline that
         // is shared by many consumers
-        filingType = '10-K'
+        filingType = '10-K',
+        ticker
     } = req.query;
 
     if (!ticker) {
