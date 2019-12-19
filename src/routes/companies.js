@@ -54,8 +54,8 @@ router.get('/:ticker', async (req, res) => {
     });
 })
 
-router.get('/crawl/:companyId/filings', async (req, res) => {
-    const { companyId } = req.params;
+router.get('/crawl/:ticker/filings', async (req, res) => {
+    const { ticker } = req.params;
     const {
         source = 'sec',
         // todo: validate filingTypes at some point in the pipeline that
@@ -63,11 +63,11 @@ router.get('/crawl/:companyId/filings', async (req, res) => {
         filingType = '10-K'
     } = req.query;
 
-    if (!companyId) {
-        return res.status(401).send({ err: 'No filing id provided.' });
+    if (!ticker) {
+        return res.status(401).send({ err: 'No ticker provided.' });
     }
 
-    const { ticker } = await companies.model.findById(companyId);
+    const { _id: companyId } = await companies.model.findOne({ ticker });
 
     // fetch all filings for company
     await parseFilingRssFeed(source, [ticker], filingType);

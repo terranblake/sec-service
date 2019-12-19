@@ -190,7 +190,7 @@ module.exports.createTaxonomyTree = async (tree, version) => {
 
 module.exports.download = (extensionLink, progress = 1 /* log every 1 mb */) => {
     logs({ message: `downloading file from ${extensionLink}` });
-    
+
     return new Promise((resolve, reject) => {
         let data = "";
 

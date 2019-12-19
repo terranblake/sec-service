@@ -8,7 +8,7 @@ module.exports.formatters = {
 
                 return {
                     documentType: extensionType,
-                    extendedLinkRole: identifier['extended link role'],
+                    extendedLinkRole,
                     role: {
                         type: roleType,
                         name: roleName

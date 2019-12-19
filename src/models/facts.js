@@ -21,6 +21,13 @@ const factSchema = new Schema({
         type: String,
         required: true,
     },
+    // defines if the fact was created as the result of a link
+    // being used (calculation arcs)
+    link: {
+        type: Schema.Types.ObjectId,
+        ref: 'Link',
+        required: false
+    },
     // used for facts which have a segment element defined in the
     // context that the fact references
     segment: [{

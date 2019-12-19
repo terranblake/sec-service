@@ -1,82 +1,45 @@
-const { readFile } = require('fs');
-const { parseString } = require('xml2js');
-const { promisify } = require('util');
-
 const { Graph } = require("@dagrejs/graphlib");
+const moment = require('moment');
 
+const companies = require('../models/companies');
 const facts = require('../models/facts');
 const identifiers = require('../models/identifiers');
 const filingDocuments = require('../models/filingDocuments');
 
-const { logs, errors } = require('../utils/logging');
-const { download } = require('../utils/raw-data-helpers')
-const { formatContexts, formatFacts, formatUnits } = require('../utils/filing-document-helpers');
-const { filingDocument: filingDocumentParserOptions } = require('../utils/parser-options');
+const { crawlById: crawlFilingDocumentById } = require('../controllers/filingDocuments');
+const filingDocumentParsers = require('../utils/filing-document-parsers');
 
-const readFileAsync = promisify(readFile);
-const parseStringAsync = promisify(parseString);
+const { logs } = require('../utils/logging');
 
 module.exports.parseFromFiling = async (filingId) => {
 	const documents = await filingDocuments.model
-		.find({ filing: filingId, type: 'instance' })
-		.lean()
-		.populate({ path: 'company' });
-	let factIds = [];
+		.find({
+			filing: filingId,
+			type: { $in: Object.keys(filingDocumentParsers) }
+		})
+		.lean();
 
 	logs(`found ${documents.length} filingDocuments to crawl for facts`);
-
 	for (let document of documents) {
-		const { fileUrl, company, status, statusReason, _id } = document;
-		let elements;
-
-		if (status === 'crawling' || status === 'crawled') {
-			errors(`skipping crawling filingDocument ${_id} for ${company._id} because filingDocument is being crawled or was already crawled`);
-			continue;
-		}
-
-		// read from local archive if exists
-		if (status === 'downloaded' && statusReason) {
-			logs(`filingDocument ${_id} loaded from local archive since it has been downloaded company ${company} filing ${filingId}`);
-			elements = await readFileAsync(statusReason);
-		// otherwise download the document again
-		} else {
-			logs(`filingDocument ${_id} downloaded from source since it has not been downloaded company ${company} filing ${filingId}`);
-			elements = await download(fileUrl);
-		}
-
-		elements = await parseStringAsync(elements, filingDocumentParserOptions);
-		elements = elements["xbrli:xbrl"] || elements.xbrl;
-
-		await filingDocuments.model.findOneAndUpdate({ _id: document._id }, { status: 'crawling' });
-
-		// format units
-		let rawUnits = elements["xbrli:unit"] || elements.unit;;
-		validUnits = formatUnits(rawUnits);
-
-		if (!validUnits || Array.isArray(validUnits) && !validUnits.length) {
-			errors('no units returned from unit formatter. bailing!');
-			return;
-		}
-
-		// todo: this probably won't work for every 
-		let rawContexts = elements['xbrli:context'] || elements.context;
-		let newContexts = await formatContexts(rawContexts);
-
-		// format facts
-		const newFacts = await formatFacts(elements, newContexts, validUnits, filingId, company);
-		for (let fact of newFacts) {
-			await facts.model.create(fact);
-		}
-
-		await filingDocuments.model.findOneAndUpdate({ _id: document._id }, { status: 'crawled' });
+		await crawlFilingDocumentById(document._id);
 	}
 
 	return factIds;
 }
 
-module.exports.getChildren = async (filing, identifierName, roleName) => {
-	const rootIdentifiers = await identifiers.model.find({ depth: '0' }).lean();
-	if (!rootIdentifiers) {
+module.exports.getChildren = async (ticker, roleName, year = moment().year()) => {
+	const rootQuery = {
+		'role.name': roleName,
+		depth: 0
+	};
+
+	const company = await companies.model.findOne({ ticker }).lean();
+	if (!company) {
+		return {};
+	}
+
+	const rootIdentifiers = await identifiers.model.find(rootQuery).lean();
+	if (!rootIdentifiers.length) {
 		return {};
 	}
 
@@ -92,7 +55,8 @@ module.exports.getChildren = async (filing, identifierName, roleName) => {
 		
 		const foundFact = await facts.model.findOne({
 			name: current.name,
-			filing
+			company: company._id,
+			'date.year': year,
 		}).lean();
 
 		if (!depths.includes(current.depth)) {
@@ -100,14 +64,12 @@ module.exports.getChildren = async (filing, identifierName, roleName) => {
 		}
 
 		const children = await identifiers.model.find({
-			role: current.role,
+			'role.name': current.role.name,
 			depth: current.depth + 1,
 			parent: current.name
 		}).lean();
 
-		if (Object.keys(children).length) {
-			graph.setNode(current.name, foundFact);
-		}
+		graph.setNode(current.name, foundFact);
 		
 		for (let child of children) {
 			graph.setEdge(current.name, child.name);
@@ -134,7 +96,6 @@ module.exports.getChildren = async (filing, identifierName, roleName) => {
 
 	do {
 		const edge = toSearch.shift();
-
 		const node = graph.node(edge.w);
 		if (node) {
 			const depth = Object.keys(depthEdges).find(d => depthEdges[d].includes(edge.w));

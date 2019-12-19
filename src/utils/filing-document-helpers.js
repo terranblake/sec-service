@@ -1,13 +1,16 @@
-const util = require('util');
-const moment = require('moment');
-
 const identifiers = require('../models/identifiers');
+const links = require('../models/links');
 
-const { logs, errors, warns } = require('./logging');
+const { logs, errors } = require('./logging');
 const { magnitude, signum } = require('.');
-const supportedUnits = require('./supported-units');
+// const supportedUnits = require('./supported-units');
 
-const { identifierPrefixes, factCurrencies } = require('./common-enums');
+const {
+    identifierPrefixes,
+    factCurrencies,
+    supportedUnitTypes
+} = require('./common-enums');
+
 const {
     getDateType,
     getYearReported,
@@ -24,16 +27,23 @@ module.exports.formatFacts = async (unformattedFacts, contexts, units, filing, c
             continue;
         }
 
+        // get the gaap identifier name
         identifierName = fact.substr(fact.indexOf(':') + 1);
-        let matchedIdentifiers = await identifiers.model.find({ name: identifierName });
-        matchedIdentifiers = matchedIdentifiers.map(i => i._id);
 
-        if (!Array.isArray(matchedIdentifiers) || !matchedIdentifiers.length) {
-            errors(`no identifier found for ${fact} company ${company} filing ${filing}`);
-            continue;
+        const identifierExists = await identifiers.model.findOne({ name: identifierName });
+
+        let link;
+        if (!identifierExists) {
+            errors(`no identifier found for ${fact} searching links company ${company} filing ${filing}`);
+
+            // fall back on link definitions if an identifier isn't found
+            link = await links.model.findOne({ filing, company, name: identifierName });
+            if (!link) {
+                continue;
+            }
         }
 
-        const likeFacts = await expandAndFormatLikeFacts(unformattedFacts[fact], contexts, units, filing, company, matchedIdentifiers, identifierName);
+        const likeFacts = await expandAndFormatLikeFacts(unformattedFacts[fact], contexts, units, filing, company, identifierName, link);
         if (!likeFacts.length) {
             if (fact.includes('gaap')) {
                 logs(`identifier with name ${identifierName} was a gaap identifier with no valid facts`);
@@ -49,7 +59,7 @@ module.exports.formatFacts = async (unformattedFacts, contexts, units, filing, c
     return expandedFacts;
 }
 
-async function expandAndFormatLikeFacts(facts, contexts, units, filing, company, identifiers, identifierName) {
+async function expandAndFormatLikeFacts(facts, contexts, units, filing, company, identifierName, link) {
     let updatedFacts = [];
 
     for (let fact of facts) {
@@ -70,11 +80,11 @@ async function expandAndFormatLikeFacts(facts, contexts, units, filing, company,
         fact = {
             filing,
             company,
-            identifier: identifiers[0],
             name: identifierName,
             date: context.date,
             itemType: unit.type,
             value,
+            link,
             segment: context.segment,
             label: fact.label || fact.name,
             // todo :: Get balance for facts (debit, credit)
@@ -116,16 +126,24 @@ function normalizeFact(fact) {
 }
 
 module.exports.formatUnits = (rawUnits) => {
+    logs('formatting units');
+
     let formattedUnits = []
     for (let rawUnit of rawUnits) {
         const name = rawUnit.$.id;
 
-        const rawCalcType = Object.keys(rawUnit).find(u => u.includes('xbrli:'));
-        const type = rawCalcType && rawCalcType.split(':').length
-            ? rawCalcType.split(':')[1]
-            : 'measure';
+        let type;
+        let rawType = Object.keys(rawUnit).find(u => u.includes('xbrli:') || supportedUnitTypes.includes(u));
+        const typeIncludesColon = rawType.includes(':');
+        if (typeIncludesColon) {
+            type = rawType.split(':').length
+                ? rawType.split(':')[1]
+                : 'measure';
+        } else {
+            type = rawType;
+        }
 
-        let unit = rawUnit[rawCalcType];
+        let unit = rawUnit[rawType];
         let formattedUnit = {
             name,
             type,
@@ -136,11 +154,16 @@ module.exports.formatUnits = (rawUnits) => {
             const [prefix, name] = unit[0].split(':');
             formattedUnit.calculation = [{ prefix, name }];
         } else {
+            const measureKey = typeIncludesColon ? 'xbrli:measure' : 'measure';
+
             // only do this if the unit type isn't a simple measure calculation
             unit = unit[0];
             for (let item of Object.keys(unit)) {
                 item = unit[item];
-                const [prefix, name] = item[0]['xbrli:measure'][0].split(':');
+
+                // todo: handle numerator/denominator identification in calculation
+
+                const [prefix, name] = item[0][measureKey][0].split(':');
                 formattedUnit.calculation.push({ prefix, name });
             }
         }
@@ -148,6 +171,7 @@ module.exports.formatUnits = (rawUnits) => {
         formattedUnits.push(formattedUnit);
     }
 
+    logs('formatted units');
     return formattedUnits;
 }
 
@@ -167,7 +191,16 @@ module.exports.formatContexts = async (extensionContexts, filing, company) => {
         }
 
         const date = formatContextDate(period);
-        const segment = rawSegment && formatContextSegment(rawSegment[0]);
+
+        // todo: handle support for typed members
+        if (rawSegment && rawSegment[0]['xbrldi:typedMember']) {
+            errors('skipping typed member beacuse it is not supported');
+        }
+
+        const segment = rawSegment
+            // todo: handle support for typed members
+            && !rawSegment[0]['xbrldi:typedMember']
+            && formatContextSegment(rawSegment[0]);
 
         formattedContexts.push({
             label: context['$'].id,
@@ -185,15 +218,21 @@ function formatContextDate(contextPeriod) {
     if (!contextPeriod) {
         throw new Error('context period is missing');
     }
+
+    if (!Object.keys(contextPeriod)) {
+        console.log({ contextPeriod });
+    }
+
     const rawDateType = Object.keys(contextPeriod)[0].includes('instant') ? 'instant' : 'series';
     const value = rawDateType === 'instant'
         ? new Date((contextPeriod["xbrli:instant"] || contextPeriod.instant)[0])
         : {
-            startDate: new Date(contextPeriod["xbrli:startDate"][0] || contextPeriod.startDate),
-            endDate: new Date(contextPeriod["xbrli:endDate"][0] || contextPeriod.endDate)
+            startDate: new Date((contextPeriod["xbrli:startDate"] || contextPeriod.startDate)[0]),
+            endDate: new Date((contextPeriod["xbrli:endDate"] || contextPeriod.endDate)[0])
         };
 
     const type = getDateType(value);
+
     return {
         type,
         value,
@@ -232,4 +271,45 @@ function formatContextSegment(segment = {}) {
     }
 
     return formattedSegment;
+}
+
+module.exports.formatCalculationLink = (rawLink) => {
+    const linkRole = rawLink.$['xlink:role'];
+    const name = linkRole.split('/').pop();
+
+    let formattedLinks = [];
+
+    const calculationArcs = rawLink['link:calculationArc'] || [];
+    for (let arc of calculationArcs) {
+        arc = arc.$;
+        const roleArc = arc['xlink:arcrole'].split('/').pop();
+        const type = arc['xlink:type'];
+
+        // link from this existing identifier in the tree
+        const [, fromPrefix, fromName] = arc['xlink:from'].split('_');
+        // link to an identifier that isn't normally in this tree
+        const [, toPrefix, toName] = arc['xlink:to'].split('_');
+        const { order, weight } = arc;
+
+        formattedLinks.push({
+            name: toName,
+            role: {
+                name,
+                arc: roleArc
+            },
+            to: {
+                prefix: toPrefix,
+                name: toName
+            },
+            from: {
+                prefix: fromPrefix,
+                name: fromName
+            },
+            order,
+            weight,
+            type
+        });
+    }
+
+    return formattedLinks;
 }

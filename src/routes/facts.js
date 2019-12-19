@@ -18,13 +18,13 @@ router.post('/fetch', async (req, res) => {
 });
 
 router.get('/children', async (req, res) => {
-    const { filing, identifierName, roleName } = req.query;
+    const { ticker, role, year } = req.query;
 
-    if (!filing) {
-        return res.status(401).send({ err: 'No filing id provided.' });
+    if (!ticker) {
+        return res.status(401).send({ err: 'No ticker provided.' });
     }
 
-    const result = await getChildren(filing, identifierName, roleName);
+    const result = await getChildren(ticker.toLowerCase(), role, year);
     return res.status(200).send(result);
 });
 

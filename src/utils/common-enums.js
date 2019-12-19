@@ -17,6 +17,10 @@ module.exports = {
 
         'failed'        // node was  unsuccessful in completng one of the following steps. view the accompanying models `statusReason` field to find out why
     ],
+    filingDocumentParsingOrder: {
+        0: 'calculation',
+        1: 'instance'
+    },
     filingDocumentTypes: ['calculation', 'presentation', 'label', 'definition', 'instance', 'schema', 'elements'],
     filingTypes: ['10-K', '10-Q', '20-F', 'S-1', 'POS AM', 'S-1/A', '485BPOS', '10-K/A', '497', '10-Q/A', '40-F', '8-K', '10-K405'],
     filingSubTypes: {
@@ -32,6 +36,7 @@ module.exports = {
     },
     identifierPrefixes: ['us-gaap', 'srt', 'gaap', 'currency', 'stpr', 'exch', 'country', 'dei'],
     identifierDocumentFlags: ['statement', 'disclosure'],
+    supportedUnitTypes: ['measure', 'divide', 'multiply'],
     supportedRegulators: {
         'sec': {
             'all': 'https://www.sec.gov/Archives/edgar/xbrlrss.all.xml',
