@@ -13,7 +13,6 @@ const filings = require('../models/filings');
 const { getMetadata } = require('./metadata');
 const { filingDocumentTypes } = require('./common-enums');
 const { logs, errors } = require('./logging');
-const { workbookFormatters } = require('./workbook-helpers');
 
 module.exports.formatFilingBySource = (source, filingObj, company) => ({
     'sec': {
@@ -32,27 +31,6 @@ module.exports.formatFilingBySource = (source, filingObj, company) => ({
         fileNumber: filingObj.filing['edgar:fileNumber'][0],
     }
 }[source]);
-
-const extractDefitionObjectFromString = (definition) => {
-    definition = definition
-        && definition.split('-')
-        || [];
-    return {
-        id: definition[0].trim(),
-        flag: definition[1].trim(),
-        context: definition[2].trim(),
-    };
-}
-
-module.exports.formatWorkbookByVersion = (rawObjects, extensionType, version) => {
-    extensionType = extensionType.toLowerCase();
-    const formatter = workbookFormatters[version];
-
-    // todo: move all objects within scope of the formatter since
-    // some versions of workbooks are going to require a current
-    // role name since there isn't a guaranteed column for that data
-    return map(rawObjects, formatter(identifier));
-}
 
 module.exports.formatFilingDocuments = async (filingsDocuments, company, filing) =>
     reduce(filingsDocuments, (acc, document) => {
@@ -129,16 +107,8 @@ module.exports.loadCompaniesFromJson = async (path, next) => {
     require('fs').readFile(path, (err, res) => next(JSON.parse(res)));
 }
 
-module.exports.getRawWorkbookObjects = async (path, sheet) => {
-    const hrstart = process.hrtime();
-
-    logs(`loading workbook ${sheet} ${path}`);
-    const workbook = xlsx.readFile(path);
-
-    logs(`loaded workbook ${path}`);
-
+module.exports.getRawIdentifiersFromSheet = async (workbook, sheet) => {
     const sheets = workbook.SheetNames;
-
     const sheetRegex = new RegExp(sheet, 'i');
     const matchedSheet = sheets.find(s => sheetRegex.test(s));
 
@@ -148,9 +118,6 @@ module.exports.getRawWorkbookObjects = async (path, sheet) => {
 
     workbookIndex = sheets.indexOf(matchedSheet);
     workbookJson = xlsx.utils.sheet_to_json(workbook.Sheets[matchedSheet]);
-
-    const hrend = process.hrtime(hrstart)
-    logs(`loaded workbook in ${hrend[0]}s ${hrend[1] / 1000000}ms`);
 
     return workbookJson;
 }
@@ -163,7 +130,7 @@ module.exports.createTaxonomyTree = async (tree, version) => {
 
     let depthC = 0;
     for (let identifier of sortedTree) {
-        const { depth, definition, name, parent } = identifier;
+        const { depth, name, parent } = identifier;
         identifier.version = version;
 
         if (depth > depthC) {
@@ -171,16 +138,9 @@ module.exports.createTaxonomyTree = async (tree, version) => {
             depthC++;
         }
 
-        // todo: no longer populating defintion object. this field
-        // now lives in the role object on the identifier model
-        const { id: roleId } = extractDefitionObjectFromString(definition);
-        if (identifier.role) {
-            identifier.role.id = roleId;
-        }
-
         const parentIdentifierName = parent && parent.split(':').pop();
         if (parentIdentifierName) {
-            logs(`found parent identifier for ${name} depth ${depth - 1} parent ${identifier.parentIdentifierName}`);
+            logs(`found parent identifier for ${name} depth ${depth - 1} parent ${parentIdentifierName}`);
             identifier.parent = parentIdentifierName;
         }
 

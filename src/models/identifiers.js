@@ -1,11 +1,10 @@
 const { model, Schema } = require('mongoose');
 const { errors } = require('../utils/logging');
+
 const {
-    filingDocumentTypes,
-    identifierDocumentFlags,
+    itemTypes,
     identifierPrefixes,
-    periodTypes,
-    itemTypes
+    filingDocumentTypes,
 } = require('../utils/common-enums');
 
 const identifierSchema = new Schema({
@@ -17,7 +16,7 @@ const identifierSchema = new Schema({
     itemType: {
         type: String,
         enum: itemTypes,
-        required: true
+        required: false
     },
     extendedLinkRole: {
         type: String,
@@ -38,16 +37,16 @@ const identifierSchema = new Schema({
         name: String,
         id: String
     },
-    definition: {
-        id: {
-            type: String,
-        },
-        flag: {
-            type: String,
-            enum: identifierDocumentFlags,
-        },
-        context: String,
-    },
+    // definition: {
+    //     id: {
+    //         type: String,
+    //     },
+    //     flag: {
+    //         type: String,
+    //         enum: identifierDocumentFlags,
+    //     },
+    //     context: String,
+    // },
     prefix: {
         type: String,
         enum: identifierPrefixes,
@@ -76,15 +75,11 @@ const identifierSchema = new Schema({
         type: String,
         require: false
     },
-    periodType: {
-        type: String,
-        enum: periodTypes,
-        required: false
-    },
     abstract: Boolean,
     documentation: String,
     createdAt: Date,
     updatedAt: Date,
+    version: String,
 });
 
 identifierSchema.index({

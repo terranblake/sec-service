@@ -28,15 +28,16 @@ module.exports.parseFromFiling = async (filingId) => {
 }
 
 module.exports.getChildren = async (ticker, roleName, year = moment().year()) => {
-	const rootQuery = {
-		'role.name': roleName,
-		depth: 0
-	};
-
 	const company = await companies.model.findOne({ ticker }).lean();
 	if (!company) {
 		return {};
 	}
+
+	const rootQuery = {
+		'role.name': roleName,
+		depth: 0,
+		version: year
+	};
 
 	const rootIdentifiers = await identifiers.model.find(rootQuery).lean();
 	if (!rootIdentifiers.length) {
@@ -66,7 +67,8 @@ module.exports.getChildren = async (ticker, roleName, year = moment().year()) =>
 		const children = await identifiers.model.find({
 			'role.name': current.role.name,
 			depth: current.depth + 1,
-			parent: current.name
+			parent: current.name,
+			version: year
 		}).lean();
 
 		graph.setNode(current.name, foundFact);

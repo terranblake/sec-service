@@ -10,8 +10,8 @@ router.post('/crawl/:type', async (req, res) => {
     const { path, sheet, version } = req.body;
 
     // todo: use type param from request to pick the correct crawler type
-    const newIdentifiers = await crawlTaxonomyXlsxSheet(path, sheet, version);
-    res.status(200).send(newIdentifiers);
+    await crawlTaxonomyXlsxSheet(path, sheet, version);
+    res.status(200).send({ result: `👍` });
 })
 
 module.exports = router;
