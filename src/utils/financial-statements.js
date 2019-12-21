@@ -1,5 +1,5 @@
 module.exports = {
-	"balance-sheet": [
+	'balance-sheet': [
 		// finanacial position
 		'StatementOfFinancialPositionClassified',
 		'StatementOfFinancialPositionClassifiedFirstAlternative',
@@ -40,7 +40,7 @@ module.exports = {
 		// investments
 		'InvestmentHoldings',
 	],
-	"income-statement": [
+	'income-statement': [
 		// income statement
 		'StatementOfIncome',
 		'StatementOfIncomeDiscontinuedOperationsAlternate',
@@ -67,17 +67,17 @@ module.exports = {
 		'RetirementBenefitsTmp08',
 		'RetirementBenefitsTmp09',
 	],
-	"cash-flow-statement": [
+	'cash-flow-statement': [
 		// statement of cash flows
 		'StatementOfCashFlowsDirect',
 		'StatementOfCashFlowsIndirect',
 		'StatementOfCashFlowsIndirectDepositBasedOperations',
 		'StatementOfCashFlowsIndirectInvestmentBasedOperations',
 	],
-	"partners-capital-statement": [
+	'partners-capital-statement': [
 		'StatementOfPartnersCapital'
 	],
-	"financial-services": [
+	'financial-services': [
 		'FinancialInstrumentsFairValueDisclosures',
 		'FinancialServicesBankingAndThrift',
 		'FinancialServicesBankingAndThriftCalc1',

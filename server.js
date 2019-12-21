@@ -1,6 +1,3 @@
-// todo: create interface for crawling which creating a flat plane across all
-// collections to implement. similiar to a CRUD interface
-
 // todo: just do this so we don't forget to use this env variable
 process.env.ARCHIVE_LOCATION = process.env.ARCHIVE_LOCATION || '/Users/terran/Desktop/sec-filing-archive';
 
@@ -10,25 +7,14 @@ const { logs } = require('./src/utils/logging');
 // const mongoose = require('mongoose');
 
 const StorageFramework = require('./src/core/storage-framework');
-// const EventFramework = require('./src/core/event-framework');
-let storageFramework, eventFramework;
+let storageFramework;
 
 function storage() {
     storageFramework = new StorageFramework(['mongodb']);
     storageFramework.initialize();
 }
 
-// function events() {
-//     eventFramework = new EventFramework(['mongodb']);
-//     eventFramework.initialize();
-// }
-
 storage();
-// TODO finish event framework
-// mongoose.connection
-//     .on('connected', events)
-    // .on('resetting', events)
-    // .on('reconnectionFailed', storage);
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));

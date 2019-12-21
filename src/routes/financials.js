@@ -1,3 +1,5 @@
+const { keys } = require('lodash');
+
 const express = require('express')
 const router = express.Router({ mergeParams: true });
 
@@ -5,11 +7,11 @@ const filings = require('../models/filings');
 const companies = require('../models/companies');
 const { getByCompanyAndYear } = require('../controllers/financials');
 
-const roleByFinancialStatement = require('../utils/role-by-financial-statement');
-const financials = Object.keys(roleByFinancialStatement);
+const financialStatements = require('../utils/financial-statements');
+const financials = keys(financialStatements);
 
 // get all supported financials (available keys)
-router.get('/', async (_req, res) => res.json(Object.keys(roleByFinancialStatement)))
+router.get('/', async (_req, res) => res.json(keys(financialStatements)));
 
 // get all roles included in a financial (values)
 router.get('/:financial', async (req, res) => {
@@ -22,8 +24,8 @@ router.get('/:financial', async (req, res) => {
         });
     }
 
-    res.json(roleByFinancialStatement[financial]);
-})
+    res.json(financialStatements[financial]);
+});
 
 // get all values included in a financial for a specific company
 // this would use the industry defined financial to parse the
@@ -52,7 +54,11 @@ router.get('/:financial/:ticker', async (req, res) => {
     }
 
     // todo: handle filings not for the year requested
-    const crawledFilings = await filings.model.find({ company: company._id, status: { $in: ['crawled', 'downloaded'] } }).count();
+    const crawledFilings = await filings.model.find({
+        company: company._id,
+        status: { $in: ['crawled', 'downloaded'] }
+    }).count();
+
     if (!crawledFilings) {
         return res.status(401).send({
             err: 'No crawled or downloaded filings for ticker. 👎',
