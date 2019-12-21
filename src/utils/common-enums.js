@@ -10,7 +10,7 @@ module.exports = {
         'downloaded',   // node peripheral information has been gathered. branching can begin
         'crawling',     // node is being crawled for child components (if part of model controller definition)
         'crawled',      // node has been crawled for all immediate neighbors/children (e.g. a filing is in the crawled state once all FilingDocument documents have been created)
-        
+
         // todo:
         // there might need to be a separate completed state based on the implementation that comes after, but the current thought is that a node can and should be recrawled
         // regularly, so having a completed state is only necessary if there are intermediary steps that would come after being crawled which need a separate state

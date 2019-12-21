@@ -3,7 +3,7 @@ const router = express.Router({ mergeParams: true });
 
 const {
     parseFromFiling,
-    getChildren
+    getIdentifierTreeByYear
 } = require('../controllers/facts');
 
 router.post('/fetch', async (req, res) => {
@@ -24,7 +24,7 @@ router.get('/children', async (req, res) => {
         return res.status(401).send({ err: 'No ticker provided.' });
     }
 
-    const result = await getChildren(ticker.toLowerCase(), role, year);
+    const result = await getIdentifierTreeByYear(ticker.toLowerCase(), role, year);
     return res.status(200).send(result);
 });
 

@@ -35,8 +35,8 @@ router.post('/', async (req, res) => {
 });
 
 router.get('/', async (req, res) => {
-    const { params = {} } = req;
-    const { ticker } = params;
+    const { query = {} } = req;
+    const { ticker } = query;
 
     let company = await companies.model.findOne({ ticker });
     if (company) {

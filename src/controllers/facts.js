@@ -27,7 +27,8 @@ module.exports.parseFromFiling = async (filingId) => {
 	return factIds;
 }
 
-module.exports.getChildren = async (ticker, roleName, year = moment().year()) => {
+// todo: pre-compute yearly identifier trees and store them in redis for quick lookup
+module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year = moment().year()) => {
 	const company = await companies.model.findOne({ ticker }).lean();
 	if (!company) {
 		return {};
