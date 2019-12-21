@@ -6,8 +6,6 @@ const {
 } = require('../utils/raw-data-helpers');
 
 const { filingDocumentTypes } = require('../utils/common-enums');
-const { logs } = require('../utils/logging');
-
 const workbookParsers = require('../utils/workbook-parsers');
 
 module.exports.crawlTaxonomyXlsxSheet = async (path, sheet, version) => {
