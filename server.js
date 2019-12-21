@@ -4,7 +4,6 @@ process.env.ARCHIVE_LOCATION = process.env.ARCHIVE_LOCATION || '/Users/terran/De
 const bodyParser = require('body-parser');
 const express = require('express');
 const { logs } = require('./src/utils/logging');
-// const mongoose = require('mongoose');
 
 const StorageFramework = require('./src/core/storage-framework');
 let storageFramework;

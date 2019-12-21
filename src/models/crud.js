@@ -6,20 +6,15 @@ class Crud {
             ...createObject
         };
 
-        return await model
-            .create(createObject, fields)
+        await model.create(createObject, fields)
     }
 
     async get(model, query, fields) {
-        return await model
-            .find(query, fields)
-            .populate();
+        await model.find(query, fields);
     }
 
     async getById(model, _id) {
-        return await model
-            .findOne({ _id })
-            .populate()
+        await model.findOne({ _id })
     }
 
     async update(model, query, updateObject, fields) {
@@ -28,24 +23,19 @@ class Crud {
             ...updateObject
         }
 
-        return await model
-            .update(query, updateObject, { upsert: true, multi: true })
+        await model.update(query, updateObject, { upsert: true, multi: true })
     }
 
     async updateById(model, _id, updateObject, fields) {
-        return await model
-            .findOneAndUpdate({ _id }, updateObject, fields)
-            .populate()
+        await model.findOneAndUpdate({ _id }, updateObject, fields)
     }
 
     async delete(model, query) {
-        return await model
-            .deleteMany(query);
+        await model.deleteMany(query);
     }
 
     async deleteById(model, _id) {
-        return await model
-            .deleteOne({ _id });
+        await model.deleteOne({ _id });
     }
 
     async list(model, query, fields) {

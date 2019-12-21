@@ -28,8 +28,6 @@ const companySchema = new Schema({
     },
     fiscalYearEnd: {
         type: Date,
-        // TODO :: Add fiscalYearEnd to
-        //          metadata-service capabilities
         required: false,
     },
     exchange: {
@@ -53,12 +51,3 @@ companySchema.index({
 
 const companyModel = model('Company', companySchema);
 module.exports.model = companyModel;
-
-module.exports.findByCik = async (cik) => {
-    return await companyModel
-        .findOne({ cik: { $regex: new RegExp(cik) } })
-        .then((company) => {
-            return company;
-        })
-        .catch(console.error);
-}

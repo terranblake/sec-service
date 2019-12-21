@@ -1,5 +1,4 @@
 const { model, Schema } = require('mongoose');
-const { identifierPrefixes } = require('../utils/common-enums');
 
 const linkSchema = new Schema({
     filing: {
