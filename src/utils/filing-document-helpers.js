@@ -1,21 +1,19 @@
-const identifiers = require('../models/identifiers');
-const links = require('../models/links');
+const { Identifier, Link } = require('@postilion/models');
+const { enums, logger, dateTypes } = require('@postilion/utils');
 
-const { logs, errors } = require('./logging');
 const { magnitude, signum } = require('.');
-// const supportedUnits = require('./supported-units');
 
 const {
-    identifierPrefixes,
     factCurrencies,
-    supportedUnitTypes
-} = require('./common-enums');
+    identifierPrefixes,
+    supportedUnitTypes,
+} = enums;
 
 const {
     getDateType,
     getYearReported,
     getQuarterReported
-} = require('./date-helpers');
+} = dateTypes;
 
 module.exports.formatFacts = async (unformattedFacts, contexts, units, filing, company) => {
     let expandedFacts = [];
@@ -23,21 +21,21 @@ module.exports.formatFacts = async (unformattedFacts, contexts, units, filing, c
     for (let fact in unformattedFacts) {
         // we only want facts we can process
         if (!identifierPrefixes.find(p => fact.includes(p))) {
-            errors(`no valid prefix found for fact grouping ${fact}`);
+            logger.error(`no valid prefix found for fact grouping ${fact}`);
             continue;
         }
 
         // get the gaap identifier name
         identifierName = fact.substr(fact.indexOf(':') + 1);
 
-        const identifierExists = await identifiers.model.findOne({ name: identifierName });
+        const identifierExists = await Identifier.findOne({ name: identifierName });
 
         let link;
         if (!identifierExists) {
-            errors(`no identifier found for ${fact} searching links company ${company} filing ${filing}`);
+            logger.error(`no identifier found for ${fact} searching links company ${company} filing ${filing}`);
 
             // fall back on link definitions if an identifier isn't found
-            link = await links.model.findOne({ filing, company, name: identifierName });
+            link = await Link.findOne({ filing, company, name: identifierName });
             if (!link) {
                 continue;
             }
@@ -46,7 +44,7 @@ module.exports.formatFacts = async (unformattedFacts, contexts, units, filing, c
         const likeFacts = await expandAndFormatLikeFacts(unformattedFacts[fact], contexts, units, filing, company, identifierName, link);
         if (!likeFacts.length) {
             if (fact.includes('gaap')) {
-                logs(`identifier with name ${identifierName} was a gaap identifier with no valid facts`);
+                logger.info(`identifier with name ${identifierName} was a gaap identifier with no valid facts`);
             }
             continue;
         }
@@ -67,13 +65,13 @@ async function expandAndFormatLikeFacts(facts, contexts, units, filing, company,
 
         const unit = await units.find(u => u.identifier === unitRef || (factCurrencies.map(c => c.toLowerCase()).includes(unitRef.toLowerCase()) || u.identifier === 'usd'));
         if (!unit) {
-            errors(`missing unit for fact identifier ${identifierName} unitRef ${unitRef} filing ${filing}`);
+            logger.error(`missing unit for fact identifier ${identifierName} unitRef ${unitRef} filing ${filing}`);
             continue;
         }
 
         const context = contexts.find(c => c.label === contextRef);
         if (!context) {
-            errors(`missing context for fact identifier ${identifierName} unitRef ${unitRef} filing ${filing}`);
+            logger.error(`missing context for fact identifier ${identifierName} unitRef ${unitRef} filing ${filing}`);
             continue;
         }
 
@@ -93,10 +91,10 @@ async function expandAndFormatLikeFacts(facts, contexts, units, filing, company,
         };
 
         if (!fact.filing) {
-            errors(`missing fields for fact identifier ${identifierName} filing ${filing}`);
+            logger.error(`missing fields for fact identifier ${identifierName} filing ${filing}`);
         }
 
-        logs(`formatted fact unit ${unit && unit.identifier} identifier ${identifierName} context ${context && context.label} filing ${filing}`);
+        logger.info(`formatted fact unit ${unit && unit.identifier} identifier ${identifierName} context ${context && context.label} filing ${filing}`);
         updatedFacts.push(fact);
     };
 
@@ -126,7 +124,7 @@ function normalizeFact(fact) {
 }
 
 module.exports.formatUnits = (rawUnits) => {
-    logs('formatting units');
+    logger.info('formatting units');
 
     let formattedUnits = []
     for (let rawUnit of rawUnits) {
@@ -171,7 +169,7 @@ module.exports.formatUnits = (rawUnits) => {
         formattedUnits.push(formattedUnit);
     }
 
-    logs('formatted units');
+    logger.info('formatted units');
     return formattedUnits;
 }
 
@@ -186,7 +184,7 @@ module.exports.formatContexts = async (extensionContexts, filing, company) => {
         // that something needs to be addressed
         const rawSegment = (entity["xbrli:segment"] || entity.segment);
         if (rawSegment && rawSegment.length > 1) {
-            errors(`more than 1 segment found for filing ${filing._id} company ${company._id}. bailing!`);
+            logger.error(`more than 1 segment found for filing ${filing._id} company ${company._id}. bailing!`);
             process.exit(1);
         }
 
@@ -194,7 +192,7 @@ module.exports.formatContexts = async (extensionContexts, filing, company) => {
 
         // todo: handle support for typed members
         if (rawSegment && rawSegment[0]['xbrldi:typedMember']) {
-            errors('skipping typed member beacuse it is not supported');
+            logger.error('skipping typed member beacuse it is not supported');
         }
 
         const segment = rawSegment

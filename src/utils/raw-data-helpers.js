@@ -1,18 +1,15 @@
 const moment = require('moment');
 const { map, reduce } = require('lodash');
-const { series } = require('async');
 const request = require("request");
 const { parseString } = require('xml2js');
 const { promisify } = require('util');
 const xlsx = require('xlsx');
 
-const identifiers = require('../models/identifiers');
-const companies = require('../models/companies');
-const filings = require('../models/filings');
-
 const { getMetadata } = require('./metadata');
-const { filingDocumentTypes } = require('./common-enums');
-const { logs, errors } = require('./logging');
+
+const { Company, Filing, Identifier } = require('@postilion/models');
+const { enums, logger } = require('@postilion/utils');
+const { filingDocumentTypes } = enums;
 
 module.exports.formatFilingBySource = (source, filingObj, company) => ({
     'sec': {
@@ -42,7 +39,7 @@ module.exports.formatFilingDocuments = async (filingsDocuments, company, filing)
 
         const documentType = description && filingDocumentTypes.find(type => new RegExp(type).test(description.toLowerCase()));
         if (!documentType) {
-            errors(`invalid document type from description ${description} filing ${filing}`);
+            logger.error(`invalid document type from description ${description} filing ${filing}`);
             return acc;
         }
 
@@ -67,16 +64,16 @@ module.exports.scrapeFilingFromRssItem = async (source, rawRssItem) => {
     const cik = Number(rawRssItem.filing['edgar:cikNumber']);
     const accessionNumber = rawRssItem.filing['edgar:accessionNumber'][0];
 
-    let foundCompany = await companies.model.find({ refId: cik });
+    let foundCompany = await Company.find({ refId: cik });
     if (!foundCompany) {
         foundCompany = await getMetadata('companies', cik);
-        errors('skipping filing processing until ticker to cik conversion is stable');
+        logger.error('skipping filing processing until ticker to cik conversion is stable');
         return false;
     }
 
-    const foundFiling = await filings.model.find({ company: foundCompany._id, accessionNumber });
+    const foundFiling = await Filing.find({ company: foundCompany._id, accessionNumber });
     if (Array.isArray(foundFiling) && foundFiling.length) {
-        errors(`duplicate filing company ${foundCompany.ticker} cik ${cik} accessionNumber ${accessionNumber}. bailing!`);
+        logger.error(`duplicate filing company ${foundCompany.ticker} cik ${cik} accessionNumber ${accessionNumber}. bailing!`);
         return false;
     }
 
@@ -125,8 +122,8 @@ module.exports.getRawIdentifiersFromSheet = async (workbook, sheet) => {
 module.exports.createTaxonomyTree = async (tree, version) => {
     const topLevelIdentifiers = [];
     const sortedTree = sortTree(tree);
-    logs('finished sorting tree');
-    logs('started creating gaap taxonomy tree');
+    logger.info('finished sorting tree');
+    logger.info('started creating gaap taxonomy tree');
 
     let depthC = 0;
     for (let identifier of sortedTree) {
@@ -134,31 +131,31 @@ module.exports.createTaxonomyTree = async (tree, version) => {
         identifier.version = version;
 
         if (depth > depthC) {
-            logs(`creating depth ${depthC} leaves`);
+            logger.info(`creating depth ${depthC} leaves`);
             depthC++;
         }
 
         const parentIdentifierName = parent && parent.split(':').pop();
         if (parentIdentifierName) {
-            logs(`found parent identifier for ${name} depth ${depth - 1} parent ${parentIdentifierName}`);
+            logger.info(`found parent identifier for ${name} depth ${depth - 1} parent ${parentIdentifierName}`);
             identifier.parent = parentIdentifierName;
         }
 
-        logs(`creating identifier ${identifier.name}`);
-        identifier = await identifiers.model.create(identifier);
+        logger.info(`creating identifier ${identifier.name}`);
+        identifier = await Identifier.create(identifier);
 
         if (depth === 0) {
-            logs(`top-level element ${name} depth ${depth - 1}`);
+            logger.info(`top-level element ${name} depth ${depth - 1}`);
             topLevelIdentifiers.push(identifier);
         }
     };
 
-    logs('finished creating gaap taxonomy tree');
+    logger.info('finished creating gaap taxonomy tree');
     return topLevelIdentifiers;
 }
 
 module.exports.download = (extensionLink, progress = 1 /* log every 1 mb */) => {
-    logs({ message: `downloading file from ${extensionLink}` });
+    logger.info({ message: `downloading file from ${extensionLink}` });
 
     return new Promise((resolve, reject) => {
         let data = "";
@@ -168,7 +165,7 @@ module.exports.download = (extensionLink, progress = 1 /* log every 1 mb */) => 
             .on('response', (response) => {
                 let cur = 0;
 
-                logs(`\tdownloading ${extensionLink}`);
+                logger.info(`\tdownloading ${extensionLink}`);
                 response.on('data', (chunk) => {
                     data += chunk;
                     cur += chunk.length;
@@ -176,12 +173,12 @@ module.exports.download = (extensionLink, progress = 1 /* log every 1 mb */) => 
                     const megaBytes = (cur / 1048576).toFixed(2);
 
                     if (progress && megaBytes % progress === 0) {
-                        logs({ message: `Downloaded ${megaBytes}mb` });
+                        logger.info({ message: `Downloaded ${megaBytes}mb` });
                     }
                 });
 
                 response.on('end', () => {
-                    logs(`\tdownloaded ${extensionLink}`);
+                    logger.info(`\tdownloaded ${extensionLink}`);
                     return resolve(data);
                 });
             })
@@ -192,7 +189,7 @@ module.exports.download = (extensionLink, progress = 1 /* log every 1 mb */) => 
 module.exports.saveExtension = (type, data) => require('fs').writeFileSync(`./data/test/${type}.json`, JSON.stringify(data));
 
 const sortTree = (tree) => {
-    logs('started sorting tree');
+    logger.info('started sorting tree');
     return tree.sort(function (a, b) {
         const depthA = a.depth, depthB = b.depth;
         if (depthA < depthB)

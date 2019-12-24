@@ -1,7 +1,7 @@
-const identifiers = require('../models/identifiers');
+const { Identifier } = require('@postilion/models');
 
 const { filter, keys, map, values, some, reduce } = require('lodash');
-const { logs } = require('./logging');
+const { logger } = require('@postilion/utils');
 
 const extractDefitionObjectFromString = (definition) => {
     definition = definition
@@ -51,14 +51,14 @@ const unmappedRoleNameVariant = (unformattedIdentifiers, documentType, version) 
         const { name, prefix } = identifier;
 
         if (prefix === 'LinkRole') {
-            logs(`extracting linkrole line name ${name}`);
+            logger.info(`extracting linkrole line name ${name}`);
             [roleType, roleName] = name.split('/').slice(-2);
             extendedLinkRole = name;
             return;
         }
 
         if (prefix === 'Definition') {
-            logs(`skipping definition line name ${name}`);
+            logger.info(`skipping definition line name ${name}`);
             definition = name;
             ({ id: roleId } = extractDefitionObjectFromString(definition));
             return;
@@ -96,7 +96,7 @@ const unmappedRoleNameVariant = (unformattedIdentifiers, documentType, version) 
 const mappedRoleNameVariant = (unformattedIdentifiers, documentType, version) => {
     let roleType, roleName, roleId, extendedLinkRole, definition;
 
-    const identifierFields = Object.keys(identifiers.model.schema.obj);
+    const identifierFields = Object.keys(Identifier.schema.obj);
     let mapping = {};
 
     return map(unformattedIdentifiers, (identifier) => {
@@ -105,7 +105,7 @@ const mappedRoleNameVariant = (unformattedIdentifiers, documentType, version) =>
         if (LinkRole === 'Definition') {
             let name = Object.keys(identifier).find(k => !['__rowNumb__', 'LinkRole'].includes(k));
 
-            logs(`extracting linkrole line name ${name}`);
+            logger.info(`extracting linkrole line name ${name}`);
             [roleType, roleName] = name.split('/').slice(-2);
             extendedLinkRole = name;
 

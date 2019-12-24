@@ -1,10 +1,7 @@
-const {
-    downloadByCompany,
-    crawlByFiling
-} = require('../controllers/filingDocuments');
+const { downloadByCompany, crawlByFiling } = require('../controllers/filing-documents');
 
-var express = require('express')
-var router = express.Router({ mergeParams: true });
+const express = require('express')
+const router = express.Router({ mergeParams: true });
 
 router.get('/download/:company', async (req, res) => {
     const { company } = req.params;

@@ -1,20 +1,14 @@
-const Identifiers = require('../models/identifiers');
-const filings = require('../models/filings');
-const filingDocuments = require('../models/filingDocuments');
-const companies = require('../models/companies');
-const identifiers = require('../models/identifiers');
-const facts = require('../models/facts');
-const moment = require('moment');
+const { Identifier, Filing, Company, Fact } = require('@postilion/models');
 
 module.exports.getFilingsIdentifierCoverage = async (ticker, filingType, threshold, startDate, endDate) => {
     if (!ticker || !filingType || !threshold || !startDate || !endDate) {
         return { message: 'missing parameters' };
     }
 
-    const company = await companies.model.findOne({ ticker });
+    const company = await Company.findOne({ ticker });
 
     // get all unique identifiers
-    const uniqueIdentifiers = await Identifiers.model.find({
+    const uniqueIdentifiers = await Identifier.find({
         documentation: { $exists: true },
     }, {
         name: 1,
@@ -55,7 +49,7 @@ module.exports.getFilingsIdentifierCoverage = async (ticker, filingType, thresho
 
 module.exports.getCoverageByCompanyAndIdentifier = async ({ filingType, startDate, endDate, identifiers, slim, threshold }) => {
     if (identifiers === 'all') {
-        identifiers = await Identifiers.model.find({}, { name: 1 }).distinct('name');
+        identifiers = await Identifier.find({}, { name: 1 }).distinct('name');
     } else {
         identifiers = Array.isArray(identifiers)
             ? identifiers
@@ -66,7 +60,7 @@ module.exports.getCoverageByCompanyAndIdentifier = async ({ filingType, startDat
         return { message: 'missing parameters' };
     }
 
-    const allCompanies = await companies.model.find({});
+    const allCompanies = await Company.find({});
     const aggregateResults = {};
     let filingIds = [];
 
@@ -120,7 +114,7 @@ module.exports.getCoverageByCompanyAndIdentifier = async ({ filingType, startDat
             continue;
         }
 
-        const [first] = await Identifiers.model.find({ name });
+        const [first] = await Identifier.find({ name });
         if (identifierGrouping[first.role.name]) {
             if (aboveThreshold) {
                 identifierGrouping[first.role.name].push(name)
@@ -160,7 +154,7 @@ module.exports.getCoverageByIdentifier = async ({ ticker, filingType, startDate,
         return { message: 'missing parameters' };
     }
 
-    const company = await companies.model.findOne({ ticker });
+    const company = await Company.findOne({ ticker });
     const filingsIdentifiers = await getAllFactsByFilingForCompanyByTypeAndDate(company, filingType, startDate, endDate);
     const companyFilings = Object.keys(filingsIdentifiers);
 
@@ -197,7 +191,7 @@ function getIdentifierCoverageByFiling(filingsIdentifiers, identifier) {
 }
 
 async function getAllFactsByFilingForCompanyByTypeAndDate(company, filingType, start, end) {
-    let companyFilings = await filings.model.find({
+    let companyFilings = await Filing.find({
         company: company._id.toString(),
         type: filingType,
         publishedAt: {
@@ -210,7 +204,7 @@ async function getAllFactsByFilingForCompanyByTypeAndDate(company, filingType, s
     for (let filing in companyFilings) {
         filing = companyFilings[filing];
 
-        let filingFacts = await facts.model.find({ filing }, { 'name': 1 });
+        let filingFacts = await Fact.find({ filing }, { 'name': 1 });
         filingFacts = filingFacts.map(f => f.name);
 
         filingsIdentifiers[filing._id] = filingFacts;

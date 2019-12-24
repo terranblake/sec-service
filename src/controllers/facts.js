@@ -1,25 +1,22 @@
 const { Graph } = require("@dagrejs/graphlib");
 const moment = require('moment');
 
-const companies = require('../models/companies');
-const facts = require('../models/facts');
-const identifiers = require('../models/identifiers');
-const filingDocuments = require('../models/filingDocuments');
+const { Company, Fact, Identifier, FilingDocument } = require('@postilion/models');
 
-const { crawlById: crawlFilingDocumentById } = require('../controllers/filingDocuments');
+const { crawlById: crawlFilingDocumentById } = require('./filing-documents');
 const filingDocumentParsers = require('../utils/filing-document-parsers');
 
-const { logs } = require('../utils/logging');
+const { logger } = require('@postilion/utils');
 
 module.exports.parseFromFiling = async (filingId) => {
-	const documents = await filingDocuments.model
+	const documents = await FilingDocument
 		.find({
 			filing: filingId,
 			type: { $in: Object.keys(filingDocumentParsers) }
 		})
 		.lean();
 
-	logs(`found ${documents.length} filingDocuments to crawl for facts`);
+	logger.info(`found ${documents.length} filingDocuments to crawl for facts`);
 	for (let document of documents) {
 		await crawlFilingDocumentById(document._id);
 	}
@@ -29,7 +26,7 @@ module.exports.parseFromFiling = async (filingId) => {
 
 // todo: pre-compute yearly identifier trees and store them in redis for quick lookup
 module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year = moment().year()) => {
-	const company = await companies.model.findOne({ ticker }).lean();
+	const company = await Company.findOne({ ticker }).lean();
 	if (!company) {
 		return {};
 	}
@@ -40,7 +37,7 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 		version: year
 	};
 
-	const rootIdentifiers = await identifiers.model.find(rootQuery).lean();
+	const rootIdentifiers = await Identifier.find(rootQuery).lean();
 	if (!rootIdentifiers.length) {
 		return {};
 	}
@@ -55,7 +52,7 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 		// set edge from depth to identifier name
 		graph.setEdge(current.depth, current.name);
 		
-		const foundFact = await facts.model.findOne({
+		const foundFact = await Fact.findOne({
 			name: current.name,
 			company: company._id,
 			'date.year': year,
@@ -65,7 +62,7 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 			depths.push(current.depth);
 		}
 
-		const children = await identifiers.model.find({
+		const children = await Identifier.find({
 			'role.name': current.role.name,
 			depth: current.depth + 1,
 			parent: current.name,
@@ -91,7 +88,7 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 	const depthEdges = {};
 	for (let depth of depths) {
 		if (depth === 6) {
-			logs(depth);
+			logger.info(depth);
 		}
 
 		depthEdges[depth] = graph.outEdges(depth).map(e => e.w);
@@ -102,7 +99,7 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 		const node = graph.node(edge.w);
 		if (node) {
 			const depth = Object.keys(depthEdges).find(d => depthEdges[d].includes(edge.w));
-			logs(`${depth} ${'\t'.repeat(depth)} ${edge.w} ${node && node.value || ''}`);
+			logger.info(`${depth} ${'\t'.repeat(depth)} ${edge.w} ${node && node.value || ''}`);
 		}
 
 		edges = graph.outEdges(edge.w);

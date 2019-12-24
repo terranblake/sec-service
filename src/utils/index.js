@@ -1,12 +1,12 @@
-const { logs, errors } = require('./logging');
+const { logger } = require('@postilion/utils');
 
 module.exports.loaded = (moduleName) => {
     try {
         require.resolve(moduleName);
-        logs(`[${moduleName}] module is loaded`)
+        logger.info(`[${moduleName}] module is loaded`)
         return true;
     } catch(e) {
-        errors(`[${moduleName}] is not loaded ${e}`);
+        logger.error(`[${moduleName}] is not loaded ${e}`);
         return false;
     }
 }
@@ -30,7 +30,7 @@ module.exports.magnitude = (value, decimals, sign) => {
     }
 
     if (decimals && !['+', '-'].includes(sign)) {
-        errors(`cannot normalize[${value}] without +/- sign[${sign}] in decimals[${decimals}]`);
+        logger.error(`cannot normalize[${value}] without +/- sign[${sign}] in decimals[${decimals}]`);
         return value;
     }
 

@@ -3,15 +3,15 @@ const { keys } = require('lodash');
 const express = require('express')
 const router = express.Router({ mergeParams: true });
 
-const filings = require('../models/filings');
-const companies = require('../models/companies');
+const { Filing, Company } = require('@postilion/models');
+
 const { getByCompanyAndYear } = require('../controllers/financials');
 
-const financialStatements = require('../utils/financial-statements');
-const financials = keys(financialStatements);
+const { roleByFinancial } = require('@postilion/utils');
+const financials = keys(roleByFinancial);
 
 // get all supported financials (available keys)
-router.get('/', async (_req, res) => res.json(keys(financialStatements)));
+router.get('/', async (_req, res) => res.json(keys(roleByFinancial)));
 
 // get all roles included in a financial (values)
 router.get('/:financial', async (req, res) => {
@@ -24,7 +24,7 @@ router.get('/:financial', async (req, res) => {
         });
     }
 
-    res.json(financialStatements[financial]);
+    res.json(roleByFinancial[financial]);
 });
 
 // get all values included in a financial for a specific company
@@ -45,7 +45,7 @@ router.get('/:financial/:ticker', async (req, res) => {
         return res.status(401).send({ err: 'No year provided. 👎' });
     }
 
-    const company = await companies.model.findOne({ ticker });
+    const company = await Company.findOne({ ticker });
     if (!company) {
         return res.status(401).send({
             err: 'No company found with that ticker. 👎',
@@ -54,7 +54,7 @@ router.get('/:financial/:ticker', async (req, res) => {
     }
 
     // todo: handle filings not for the year requested
-    const crawledFilings = await filings.model.find({
+    const crawledFilings = await Filing.find({
         company: company._id,
         status: { $in: ['crawled', 'downloaded'] }
     }).count();

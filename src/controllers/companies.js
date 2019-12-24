@@ -1,14 +1,14 @@
 
 const request = require("request");
 
-const { logs, errors } = require('../utils/logging');
-const companies = require('../models/companies');
+const { logger } = require('@postilion/utils');
+const { Company } = require('@postilion/models');
 
 module.exports.validationReducer = async (tickers) => {
     let found = [];
     for (let ticker of tickers) {
         ticker = ticker.toLowerCase();
-        let company = await companies.model.findOne({ ticker });
+        let company = await Company.findOne({ ticker });
 
         if (company) {
             found.push(company);
@@ -16,10 +16,10 @@ module.exports.validationReducer = async (tickers) => {
             let metadata = await this.getMetadata(ticker);
 
             if (metadata && metadata.ticker === ticker) {
-                company = await companies.create(metadata);
+                company = await Company.create(metadata);
                 found.push(company);
             } else {
-                errors(`unable to find company with ticker ${ticker}`);
+                logger.error(`unable to find company with ticker ${ticker}`);
             }
         }
     }

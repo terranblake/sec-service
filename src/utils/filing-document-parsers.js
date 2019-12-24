@@ -1,6 +1,4 @@
-
-const facts = require('../models/facts');
-const links = require('../models/links');
+const { Fact, Link } = require('@postilion/models');
 
 const {
     formatFacts,
@@ -21,7 +19,7 @@ module.exports = {
 
         const newFacts = await formatFacts(elements, formattedContexts, formattedUnits, filingId, company);
         for (let fact of newFacts) {
-            await facts.model.create(fact);
+            await Fact.create(fact);
         }
 
         return newFacts;
@@ -44,7 +42,7 @@ module.exports = {
         }
 
         for (let link of formattedLinks) {
-            await links.model.create({ ...link, filing, company,  });
+            await Link.create({ ...link, filing, company,  });
         }
 
         return formattedLinks;
