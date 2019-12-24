@@ -7,7 +7,7 @@ var router = express.Router({ mergeParams: true });
 // types of raw data helpers
 const { loadCompaniesFromJson } = require('../utils/raw-data-helpers');
 
-const { logger } = require('@postilion/utils');
+const { logger, metadata } = require('@postilion/utils');
 const { Filing, Company } = require('@postilion/models');
 
 const {
@@ -19,8 +19,6 @@ const {
     downloadByCompany: downloadFilingDocumentsByCompany,
     crawlByCompany: crawlFilingDocumentsByCompany
 } = require('../controllers/filing-documents');
-
-const { getMetadata } = require('../controllers/companies');
 
 router.post('/', async (req, res) => {
     const { path } = req.body;
@@ -45,7 +43,7 @@ router.get('/', async (req, res) => {
         return res.status(200).send(company);
     }
 
-    let companyMetadata = await getMetadata(ticker);
+    let companyMetadata = await metadata(Company, ticker);
     if (companyMetadata) {
         company = await Company.create(companyMetadata);
         return res.status(200).send(company);

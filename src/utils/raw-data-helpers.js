@@ -5,10 +5,8 @@ const { parseString } = require('xml2js');
 const { promisify } = require('util');
 const xlsx = require('xlsx');
 
-const { getMetadata } = require('./metadata');
-
 const { Company, Filing, Identifier } = require('@postilion/models');
-const { enums, logger } = require('@postilion/utils');
+const { enums, logger, metadata } = require('@postilion/utils');
 const { filingDocumentTypes } = enums;
 
 module.exports.formatFilingBySource = (source, filingObj, company) => ({
@@ -66,7 +64,7 @@ module.exports.scrapeFilingFromRssItem = async (source, rawRssItem) => {
 
     let foundCompany = await Company.find({ refId: cik });
     if (!foundCompany) {
-        foundCompany = await getMetadata('companies', cik);
+        foundCompany = await metadata(Company, cik);
         logger.error('skipping filing processing until ticker to cik conversion is stable');
         return false;
     }
@@ -88,7 +86,7 @@ module.exports.parseRssEntry = async (rssEntry, accessionNumber, company) => {
     let { ticker, _id } = company;
 
     // const { div: parsedRssEntry } = await this.parseXmlString(rssEntry.content);
-    const filingMetadata = await getMetadata('filings', ticker, accessionNumber);
+    const filingMetadata = await metadata(Filing, ticker, accessionNumber);
 
     filing = {
         company: _id,

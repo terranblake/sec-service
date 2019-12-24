@@ -3,6 +3,7 @@ const on = require('await-on');
 const {
     enums,
     logger,
+    metadata,
     parserOptions
 } = require('@postilion/utils');
 
@@ -10,10 +11,6 @@ const { supportedRegulators } = enums;
 const { rss } = parserOptions;
 
 const { Filing, FilingDocument } = require('@postilion/models');
-
-// todo: move any request to another service behind
-// a queue to preserve requests and track events
-const { getMetadata } = require('../utils/metadata');
 
 const { formatFilingDocuments, parseRssEntry } = require('../utils/raw-data-helpers');
 const { validationReducer } = require('../controllers/companies');
@@ -51,7 +48,7 @@ module.exports.downloadById = async (filingId) => {
     logger.info(`downloading documents metadata for filing ${_id} company ${company._id}`);
     await Filing.findOneAndUpdate({ _id }, { status: 'downloading' });
 
-    let documents = await getMetadata('documents', company.ticker, refId);
+    let documents = await metadata(FilingDocument, company.ticker, refId);
     documents = await formatFilingDocuments(documents, company, filingId);
 
     logger.info(`downloaded documents metadata for company ${company.ticker} cik ${company.cik} refId ${refId}`);
