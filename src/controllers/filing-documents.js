@@ -33,7 +33,6 @@ module.exports.downloadByCompany = async (company) => {
 
 	for (let filing of filingObjs) {
 		// todo: download all documents related to the type of filing being pulled
-		
 		// we only want to download filing documents which we haven't already
 		// and which we havent already crawled since that's later in the pipeline
 		let documents = await FilingDocument.find({

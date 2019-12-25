@@ -3,24 +3,51 @@
 
 const models = require('@postilion/models');
 const { Operation } = require('@postilion/event-framework');
-const { logger } = require('@postilion/utils');
+
+const FilingManager = require('./managers/filing-manager');
+const filingManager = new FilingManager();
+
+const FilingDocumentManager = require('./managers/filing-document-manager');
+const filingDocumentManager = new FilingDocumentManager();
 
 module.exports = [
     {
-        name: 'IdentifierCreation',
-        model: models.Identifier,
+        // get the latest filing feed for a company from their
+        // rss channel specifically for tracking filings
+        name: 'SyncFilingsFromSecByTicker',
+        model: models.Company,
+        operation: Operation.named,
+        handler: filingManager.syncSecFilingFeedByTicker,
+        filters: [],
+        options: {}
+    },
+    {
+        // get all filing documents associated with a new filing
+        name: 'GetFilingDocumentsForFiling',
+        model: models.Filing,
         operation: Operation.create,
-        handler: logger.info,
+        handler: filingManager.getDocumentsForNewFiling,
         filters: [
-            // todo: add support for more filter types
-            // supports pipeline out of the box
-            // need basic mongo query syntax filtering
+            {
+                status: 'unseeded'
+            }
         ],
-        options: {
-            // defines options to be passed to the resulting
-            // change stream. mongodb documentation provides
-            // details: http://mongodb.github.io/node-mongodb-native/3.3/api/Collection.html#watch
-            // fullDocument: 'default',
-        }
+        options: {}
+    },
+    {
+        // download all filing documents for a filing when it's
+        // filing documents have been found
+        // todo: use local storage when running locally, or an
+        // object storage provider if running in a container
+        name: 'DownloadNewFilingDocuments',
+        model: models.Filing,
+        operation: Operation.update,
+        handler: filingDocumentManager.downloadNewFilingDocuments,
+        filters: [
+            {
+                status: 'seeded'
+            }
+        ],
+        options: {}
     }
 ];

@@ -1,38 +1,15 @@
-const { each } = require('lodash');
+const express = require('express')
+const router = express.Router({ mergeParams: true });
 
-var express = require('express')
-var router = express.Router({ mergeParams: true });
+const { metadata } = require('@postilion/utils');
+const { Company } = require('@postilion/models');
 
-// todo: move into another service or create module for specific
-// types of raw data helpers
-const { loadCompaniesFromJson } = require('../utils/raw-data-helpers');
-
-const { logger, metadata } = require('@postilion/utils');
-const { Filing, Company } = require('@postilion/models');
-
-const {
-    parseFilingRssFeed,
-    downloadByCompany: downloadFilingsByCompany
-} = require('../controllers/filings');
+const { downloadByCompany: downloadFilingsByCompany } = require('../controllers/filings');
 
 const {
     downloadByCompany: downloadFilingDocumentsByCompany,
     crawlByCompany: crawlFilingDocumentsByCompany
 } = require('../controllers/filing-documents');
-
-router.post('/', async (req, res) => {
-    const { path } = req.body;
-    logger.info('loading companies from json');
-    await loadCompaniesFromJson(path, (newCompanies) => {
-        each(newCompanies, (companyObj) => {
-            Company.create(companyObj);
-        });
-
-        const message = `loaded ${Object.keys(newCompanies).length} companies from json`;
-        logger.info(message);
-        res.status(200).send({ message });
-    });
-});
 
 router.get('/', async (req, res) => {
     const { query = {} } = req;
@@ -52,31 +29,32 @@ router.get('/', async (req, res) => {
     return res.status(500).send({
         err: `unable to retrieve company with ticker ${ticker}. please try again!`
     });
-})
+});
 
+// todo: deprecate this route in favor of a service-based
+// solution which listens for a scheduled job to crawl a
+// source for new filings (scheduled integration with sec)
 router.get('/crawl/filings', async (req, res) => {
-    const {
-        source = 'sec',
-        // todo: validate filingTypes at some point in the pipeline that
-        // is shared by many consumers
-        filingType = '10-K',
-        ticker
-    } = req.query;
+    // const { source, ticker } = req.query;
 
-    if (!ticker) {
-        return res.status(401).send({ err: 'No ticker provided.' });
-    }
+    // if (!ticker) {
+    //     return res.status(401).send({ err: 'No ticker provided.' });
+    // }
 
-    const { _id: companyId } = await Company.findOne({ ticker });
+    // const { _id: companyId } = await Company.findOne({ ticker });
 
-    // fetch all filings for company
-    await parseFilingRssFeed(source, [ticker], filingType);
+    // // fetch all filings for company
+    // const feedEntries = await getLatestFilingFeed(ticker, source);
 
-    await downloadFilingsByCompany(companyId);
-    await downloadFilingDocumentsByCompany(companyId);
+    // // create filing from each entry
+    // for (let entry of feedEntries) {
+    //     await Filing.create(entry);
+    // }
+
+    // await downloadFilingsByCompany(companyId);
+    // await downloadFilingDocumentsByCompany(companyId);
     await crawlFilingDocumentsByCompany(companyId);
-    
-    const crawledFilings = await Filing.find({ status: 'crawled' });
+
     return res.status(200).send(crawledFilings);
 });
 

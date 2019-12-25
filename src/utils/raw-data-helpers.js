@@ -81,23 +81,6 @@ module.exports.scrapeFilingFromRssItem = async (source, rawRssItem) => {
 
 module.exports.parseXmlString = promisify(parseString);
 
-module.exports.parseRssEntry = async (rssEntry, accessionNumber, company) => {
-    let filing = {}
-    let { ticker, _id } = company;
-
-    // const { div: parsedRssEntry } = await this.parseXmlString(rssEntry.content);
-    const filingMetadata = await metadata(Filing, ticker, accessionNumber);
-
-    filing = {
-        company: _id,
-        publishedAt: moment(rssEntry.pubDate).format(),
-        fiscalYearEnd: moment(filingMetadata.fiscalYearEnd, 'MMYY').format(),
-        ...filingMetadata
-    }
-
-    return filing;
-}
-
 module.exports.loadCompaniesFromJson = async (path, next) => {
     require('fs').readFile(path, (err, res) => next(JSON.parse(res)));
 }

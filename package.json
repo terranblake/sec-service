@@ -18,11 +18,9 @@
   "license": "ISC",
   "dependencies": {
     "@postilion/event-framework": "^1.3.2",
-    "@postilion/models": "^1.0.9",
-    "@postilion/utils": "^1.0.8",
+    "@postilion/models": "^1.1.3",
+    "@postilion/utils": "^1.1.1",
     "@dagrejs/graphlib": "^2.1.4",
-    "@google-cloud/kms": "^0.4.0",
-    "@google-cloud/pubsub": "^0.28.1",
     "await-on": "^0.1.4",
     "body-parser": "^1.19.0",
     "colors": "^1.3.3",

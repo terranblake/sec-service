@@ -1,7 +1,4 @@
-const {
-    parseFilingRssFeed,
-    crawlById
-} = require('../controllers/filings');
+const { crawlById, getLatestRssFeed } = require('../controllers/filings');
 
 const noneFound = { message: 'No filing could be found!' };
 var express = require('express')
@@ -14,7 +11,7 @@ router.post('/fetch', async (req, res) => {
         return res.status(401).send({ err: 'No source provided.' });
     }
 
-    const result = await parseFilingRssFeed(source, tickers, type);
+    const result = await getLatestRssFeed(source, tickers, type);
     return res.status(200).send(result || noneFound);
 });
 

@@ -1,7 +1,10 @@
 const { Identifier, Link } = require('@postilion/models');
-const { enums, logger, dateTypes } = require('@postilion/utils');
+const { enums, logger, dateTypes, maths } = require('@postilion/utils');
 
-const { magnitude, signum } = require('.');
+const {
+    magnitude,
+    signum
+} = maths;
 
 const {
     factCurrencies,
@@ -109,10 +112,9 @@ function normalizeFact(fact) {
     } = fact['$'];
 
     const factSignum = signum(decimals);
-    value =
-        decimals &&
-        magnitude(fact['_'], decimals, factSignum) ||
-        fact['_'];
+    value = decimals
+        && magnitude(fact['_'], decimals, factSignum)
+        || fact['_'];
 
     return {
         value,

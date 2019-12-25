@@ -112,6 +112,7 @@ const mappedRoleNameVariant = (unformattedIdentifiers, documentType, version) =>
             definition = identifier[name];
             ({ id: roleId } = extractDefitionObjectFromString(definition));
 
+            // go to the next row
             return;
         }
 
@@ -125,6 +126,7 @@ const mappedRoleNameVariant = (unformattedIdentifiers, documentType, version) =>
                 return acc;
             }, {});
 
+            // go to the next row
             return;
         }
 
