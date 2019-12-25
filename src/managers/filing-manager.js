@@ -1,7 +1,7 @@
 const { Company, Filing, FilingDocument } = require('@postilion/models');
 
-const { rssParsers } = require('@postilion/utils');
-const { getLatestFilingFeed } = rssParsers;
+const SecManager = require('./sec-manager');
+const secManager = new SecManager();
 
 class FilingManager {
 	constructor() { }
@@ -14,7 +14,7 @@ class FilingManager {
 		}
 
 		// fetch all filings for company
-		const feedEntries = await getLatestFilingFeed(ticker, source);
+		const feedEntries = await secManager.getLatestFilingFeed(ticker, source);
 
 		// create filing from each entry
 		for (let entry of feedEntries) {

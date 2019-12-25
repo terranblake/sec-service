@@ -10,11 +10,14 @@ const filingManager = new FilingManager();
 const FilingDocumentManager = require('./managers/filing-document-manager');
 const filingDocumentManager = new FilingDocumentManager();
 
+const SecManager = require('./managers/sec-manager');
+const secManager = new SecManager();
+
 module.exports = [
     {
         // get the latest filing feed for a company from their
         // rss channel specifically for tracking filings
-        name: 'SyncFilingsFromSecByTicker',
+        name: 'SyncFilingsByTicker',
         model: models.Company,
         operation: Operation.named,
         handler: filingManager.syncSecFilingFeedByTicker,
