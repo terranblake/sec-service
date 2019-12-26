@@ -1,9 +1,12 @@
 const request = require('request');
 const { promisify } = require('util');
-const { writeFile } = require('fs');
+const { writeFile, existsSync, mkdirSync } = require('fs');
 
 const requestAsync = promisify(request);
 const writeFileAsync = promisify(writeFile);
+
+const { Company, FilingDocument, Filing } = require('@postilion/models');
+const { logger } = require('@postilion/utils');
 
 const archiveLocation = process.env.ARCHIVE_LOCATION;
 
@@ -11,15 +14,14 @@ class FilingDocumentManager {
 	constructor() { }
 
 	async downloadNewFilingDocuments(job) {
-		const { _id, company, refId } = job.fullDocument;
+		const { _id, company, refId } = job.data;
 
-		const { ticker } = await company.findOne({ _id: company }).lean();
+		const { ticker } = await Company.findOne({ _id: company }).lean();
 		await Filing.findOneAndUpdate({ _id }, { status: 'downloading' });
 
 		let documents = await FilingDocument.find({
 			company,
 			filing: _id,
-			type: { $in: Object.keys(filingDocumentParsers) },
 			status: { $nin: ['crawling', 'crawled', 'downloading'] }
 		}).lean();
 
@@ -28,7 +30,13 @@ class FilingDocumentManager {
 			return;
 		}
 
-		const filePath = `${archiveLocation}/${ticker}/${refId}`;
+		const tickerPath = `${archiveLocation}/${ticker}`;
+		if (!existsSync(tickerPath)) {
+			logger.info(`creating path ${tickerPath}`);
+			await mkdirSync(tickerPath);
+		}
+
+		const filePath = `${tickerPath}/${refId}`
 		if (!existsSync(filePath)) {
 			logger.info(`creating path ${filePath}`);
 			await mkdirSync(filePath);
@@ -37,7 +45,7 @@ class FilingDocumentManager {
 		// if one of these fails, we want the queue to fail
 		// and let us retry. if the filing document was finished 
 		for (let document of documents) {
-			await this.downloadFilingDocument(document._id, filePath);
+			await FilingDocumentManager.downloadFilingDocument(document._id, filePath);
 		}
 
 		// let other subscribers know that this filing has been downloaded
@@ -47,8 +55,8 @@ class FilingDocumentManager {
 		await Filing.findOneAndUpdate({ _id }, { status: 'downloaded' });
 	}
 
-	async downloadFilingDocument(filingDocumentId, filePath) {
-		const document = await FilingDocument.findById(filingDocumentId);
+	static async downloadFilingDocument(filingDocumentId, filePath) {
+		const document = await FilingDocument.findOne({ _id: filingDocumentId });
 		const { _id, fileName, fileUrl, company, filing, status } = document;
 	
 		// is the document in a downloaded status and the file exists
@@ -65,7 +73,7 @@ class FilingDocumentManager {
 	
 		await writeFileAsync(savePath, rawFile);
 	
-		logger.info(`finished download of filingDocument ${updatedDocument._id} to local archive company ${company} filing ${filing}`);
+		logger.info(`finished download of filingDocument ${_id} to local archive company ${company} filing ${filing}`);
 		await FilingDocument.findOneAndUpdate({ _id }, { status: 'downloaded', statusReason: savePath });
 	}
 }

@@ -22,6 +22,14 @@ module.exports = [
         options: {}
     },
     {
+        name: 'GetFilingsForNewCompany',
+        model: models.Company,
+        operation: Operation.create,
+        handler: filingManager.syncSecFilingFeedByTicker,
+        filters: [],
+        options: {}
+    },
+    {
         // get all filing documents associated with a new filing
         name: 'GetFilingDocumentsForFiling',
         model: models.Filing,
@@ -30,7 +38,7 @@ module.exports = [
         filters: [
             {
                 $match: {
-                    'fullDocument.status': 'unseeded'
+                    status: 'unseeded'
                 }
             }
         ],
@@ -48,7 +56,7 @@ module.exports = [
         filters: [
             {
                 $match: {
-                    'fullDocument.status': 'seeded'
+                    status: 'seeded'
                 }
             }
         ],

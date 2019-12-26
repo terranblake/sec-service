@@ -10,26 +10,25 @@ class FilingManager {
 	constructor() { }
 
 	async syncSecFilingFeedByTicker(job) {
-		const { ref, ticker } = job.data;
-
-		logger.info(ref, ticker);
-
+		const { _id, ticker } = job.data;
 		if (!ticker) {
 			throw new Error('no ticker found in job');
 		}
 
 		// fetch all filings for company
 		const feedEntries = await secManager.getLatestFilingFeed(ticker);
-		logger.info({ feedEntries });
 
 		// create filing from each entry
 		for (let entry of feedEntries) {
 			await Filing.create(entry);
 		}
+
+		// update last synced filing date to now
+		await Company.findOneAndUpdate({ _id }, { lastSyncedFilingsAt: new Date() });
 	}
 
 	async getDocumentsForNewFiling(job) {
-		const { _id, company, status, refId } = job.fullDocument;
+		const { _id, company, status, refId } = job.data;
 
 		// get company for this filing
 		const companyObj = await Company.findOne({ _id: company }).lean();

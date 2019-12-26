@@ -32,6 +32,7 @@ class SecManager {
 			}
 
 			const filingMetadata = await metadata(Filing, ticker, accessionNumber);
+			logger.info(`retrived metadata for filing with accession number ${accessionNumber} company ${company._id}`);
 			
 			const rssFiling = {
 				company: company._id,

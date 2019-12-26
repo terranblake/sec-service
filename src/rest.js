@@ -13,7 +13,7 @@ app.use(bodyParser.json());
 const PORT = process.env.PORT || 3000;
 
 app.use('/', async (req, res, next) => {
-    logs(`${req.method} ${req.originalUrl}`);
+    logger.info(`${req.method} ${req.originalUrl}`);
     next();
 })
 app.use('/api', require('./routes'));
