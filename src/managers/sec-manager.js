@@ -13,12 +13,12 @@ class SecManager {
 
 		// todo: fix how interfaces interact with eachother when
 		// referencing results from a mongodb query
-		const company = Company.findOne({ ticker }).lean();
+		const company = await Company.findOne({ ticker }).lean();
 		if (!company) {
 			throw new Error(`no company found with ticker ${ticker}`);
 		}
 
-		const rssUrl = rssFeeds[source].by_cik(company.cik, source);
+		const rssUrl = rssFeeds[source].by_cik(company.refId);
 		let feed = await parser.parseURL(rssUrl);
 
 		let parsedRssEntries = [];
@@ -32,7 +32,7 @@ class SecManager {
 			}
 
 			const filingMetadata = await metadata(Filing, ticker, accessionNumber);
-
+			
 			const rssFiling = {
 				company: company._id,
 				publishedAt: moment(entry.pubDate).format(),

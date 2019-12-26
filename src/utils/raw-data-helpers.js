@@ -43,7 +43,7 @@ module.exports.formatFilingDocuments = async (filingsDocuments, company, filing)
 
         acc.push({
             filing,
-            company: company._id,
+            company,
             type: documentType || undefined,
             status: 'seeded',
             sequenceNumber: document.sequence || document['$']['edgar:sequence'],

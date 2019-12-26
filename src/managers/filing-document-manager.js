@@ -11,7 +11,7 @@ class FilingDocumentManager {
 	constructor() { }
 
 	async downloadNewFilingDocuments(job) {
-		const { _id, company, refId } = job.data;
+		const { _id, company, refId } = job.fullDocument;
 
 		const { ticker } = await company.findOne({ _id: company }).lean();
 		await Filing.findOneAndUpdate({ _id }, { status: 'downloading' });

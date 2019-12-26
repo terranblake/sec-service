@@ -10,9 +10,6 @@ const filingManager = new FilingManager();
 const FilingDocumentManager = require('./managers/filing-document-manager');
 const filingDocumentManager = new FilingDocumentManager();
 
-const SecManager = require('./managers/sec-manager');
-const secManager = new SecManager();
-
 module.exports = [
     {
         // get the latest filing feed for a company from their
@@ -32,7 +29,9 @@ module.exports = [
         handler: filingManager.getDocumentsForNewFiling,
         filters: [
             {
-                status: 'unseeded'
+                $match: {
+                    'fullDocument.status': 'unseeded'
+                }
             }
         ],
         options: {}
@@ -48,7 +47,9 @@ module.exports = [
         handler: filingDocumentManager.downloadNewFilingDocuments,
         filters: [
             {
-                status: 'seeded'
+                $match: {
+                    'fullDocument.status': 'seeded'
+                }
             }
         ],
         options: {}
