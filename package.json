@@ -19,7 +19,7 @@
   "license": "ISC",
   "dependencies": {
     "@dagrejs/graphlib": "^2.1.4",
-    "@postilion/event-framework": "github:terranblake/event-framework#master",
+    "@postilion/events": "github:terranblake/events#master",
     "@postilion/models": "github:terranblake/models#master",
     "@postilion/storage": "github:terranblake/storage",
     "@postilion/utils": "github:terranblake/utils#master",
