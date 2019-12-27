@@ -16,18 +16,15 @@ class FilingManager {
 		}
 
 		// fetch all filings for company
-		const feedEntries = await secManager.getLatestFilingFeed(ticker);
-
-		// create filing from each entry
-		for (let entry of feedEntries) {
-			await Filing.create(entry);
-		}
+		// todo: add support for fetching filings from more
+		// than just the sec filings rss feed... cuz duh
+		await secManager.getLatestFilingFeed(ticker);
 
 		// update last synced filing date to now
 		await Company.findOneAndUpdate({ _id }, { lastSyncedFilingsAt: new Date() });
 	}
 
-	async getDocumentsForNewFiling(job) {
+	async getDocumentsForFiling(job) {
 		const { _id, company, status, refId } = job.data;
 
 		// get company for this filing

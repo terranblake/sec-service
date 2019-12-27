@@ -33,20 +33,20 @@ class SecManager {
 
 			const filingMetadata = await metadata(Filing, ticker, accessionNumber);
 			logger.info(`retrived metadata for filing with accession number ${accessionNumber} company ${company._id}`);
+
+			if (!filingMetadata) {
+				logger.error(`metadata for filing with accession number ${accessionNumber} returned null. this should be investigated company ${JSON.stringify(company)}`);
+				continue;
+			}
 			
-			const rssFiling = {
+			const formattedRssEntry = {
 				company: company._id,
 				publishedAt: moment(entry.pubDate).format(),
 				fiscalYearEnd: moment(filingMetadata.fiscalYearEnd, 'MMYY').format(),
 				...filingMetadata
 			}
 
-			if (!rssFiling) {
-				logger.error(`raw filing returned null after scraping from SEC. this should be investigated company ${JSON.stringify(company)}`);
-				continue;
-			}
-
-			parsedRssEntries.push(rssFiling)
+			await Filing.create(formattedRssEntry);
 		};
 
 		return parsedRssEntries;

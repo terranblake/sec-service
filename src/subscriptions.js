@@ -34,7 +34,7 @@ module.exports = [
         name: 'GetFilingDocumentsForFiling',
         model: models.Filing,
         operation: Operation.create,
-        handler: filingManager.getDocumentsForNewFiling,
+        handler: filingManager.getDocumentsForFiling,
         filters: [
             {
                 $match: {

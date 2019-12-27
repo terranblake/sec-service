@@ -43,7 +43,7 @@ class FilingDocumentManager {
 		}
 
 		// if one of these fails, we want the queue to fail
-		// and let us retry. if the filing document was finished 
+		// and let us retry. if the filing document was finished
 		for (let document of documents) {
 			await FilingDocumentManager.downloadFilingDocument(document._id, filePath);
 		}
