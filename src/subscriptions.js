@@ -2,7 +2,7 @@
 // which defines how it interacts with each queue and any filters or options
 
 const models = require('@postilion/models');
-const { Operation } = require('@postilion/event-framework');
+const { Operation } = require('@postilion/pubsub');
 
 const FilingManager = require('./managers/filing-manager');
 const filingManager = new FilingManager();

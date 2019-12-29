@@ -1,11 +1,10 @@
 const moment = require('moment');
-const { map, reduce } = require('lodash');
+const { reduce } = require('lodash');
 const request = require("request");
 const { parseString } = require('xml2js');
 const { promisify } = require('util');
-const xlsx = require('xlsx');
 
-const { Company, Filing, Identifier } = require('@postilion/models');
+const { Company, Filing } = require('@postilion/models');
 const { enums, logger, metadata } = require('@postilion/utils');
 const { filingDocumentTypes } = enums;
 
@@ -85,56 +84,6 @@ module.exports.loadCompaniesFromJson = async (path, next) => {
     require('fs').readFile(path, (err, res) => next(JSON.parse(res)));
 }
 
-module.exports.getRawIdentifiersFromSheet = async (workbook, sheet) => {
-    const sheets = workbook.SheetNames;
-    const sheetRegex = new RegExp(sheet, 'i');
-    const matchedSheet = sheets.find(s => sheetRegex.test(s));
-
-    if (!matchedSheet) {
-        throw `no sheet found that matches the provided sheet name. please try again!`;
-    }
-
-    workbookIndex = sheets.indexOf(matchedSheet);
-    workbookJson = xlsx.utils.sheet_to_json(workbook.Sheets[matchedSheet]);
-
-    return workbookJson;
-}
-
-module.exports.createTaxonomyTree = async (tree, version) => {
-    const topLevelIdentifiers = [];
-    const sortedTree = sortTree(tree);
-    logger.info('finished sorting tree');
-    logger.info('started creating gaap taxonomy tree');
-
-    let depthC = 0;
-    for (let identifier of sortedTree) {
-        const { depth, name, parent } = identifier;
-        identifier.version = version;
-
-        if (depth > depthC) {
-            logger.info(`creating depth ${depthC} leaves`);
-            depthC++;
-        }
-
-        const parentIdentifierName = parent && parent.split(':').pop();
-        if (parentIdentifierName) {
-            logger.info(`found parent identifier for ${name} depth ${depth - 1} parent ${parentIdentifierName}`);
-            identifier.parent = parentIdentifierName;
-        }
-
-        logger.info(`creating identifier ${identifier.name}`);
-        identifier = await Identifier.create(identifier);
-
-        if (depth === 0) {
-            logger.info(`top-level element ${name} depth ${depth - 1}`);
-            topLevelIdentifiers.push(identifier);
-        }
-    };
-
-    logger.info('finished creating gaap taxonomy tree');
-    return topLevelIdentifiers;
-}
-
 module.exports.download = (extensionLink, progress = 1 /* log every 1 mb */) => {
     logger.info({ message: `downloading file from ${extensionLink}` });
 
@@ -168,18 +117,6 @@ module.exports.download = (extensionLink, progress = 1 /* log every 1 mb */) => 
 }
 
 module.exports.saveExtension = (type, data) => require('fs').writeFileSync(`./data/test/${type}.json`, JSON.stringify(data));
-
-const sortTree = (tree) => {
-    logger.info('started sorting tree');
-    return tree.sort(function (a, b) {
-        const depthA = a.depth, depthB = b.depth;
-        if (depthA < depthB)
-            return -1;
-        if (depthA > depthB)
-            return 1;
-        return 0;
-    });
-}
 
 module.exports.parseUnitsUpdate = (units) => {
     for (let id in units) {

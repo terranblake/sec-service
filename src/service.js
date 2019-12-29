@@ -1,8 +1,5 @@
-const { EventFramework } = require('@postilion/event-framework');
+const { PubSub } = require('@postilion/pubsub');
 const subscriptions = require('./subscriptions');
 
-// todo: replace with config values
-const connectionString = 'mongodb://localhost/postilion';
-
-const events = new EventFramework(connectionString, subscriptions);
-module.exports = events;
+const pubsub = new PubSub(subscriptions);
+module.exports = pubsub;
