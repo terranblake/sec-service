@@ -1,6 +1,3 @@
-// todo: just do this so we don't forget to use this env variable
-process.env.ARCHIVE_LOCATION = process.env.ARCHIVE_LOCATION || '/Users/terran/Desktop/sec-filing-archive';
-
 const bodyParser = require('body-parser');
 const express = require('express');
 

@@ -1,12 +1,23 @@
 {
   "name": "sec-service",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "",
   "main": "index.js",
   "scripts": {
     "clean": "rm -rf node_modules && rm package-lock.json && npm install",
     "start": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix",
+      "git add"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "git reset HEAD .env"
+    }
   },
   "nodemonConfig": {
     "ignore": [
@@ -38,5 +49,8 @@
     "xmldom": "^0.1.27",
     "xmlserializer": "^0.6.1",
     "xpath": "0.0.27"
+  },
+  "devDependencies": {
+    "husky": "^3.1.0"
   }
 }
