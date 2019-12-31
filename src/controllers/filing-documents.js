@@ -19,6 +19,11 @@ const parseStringAsync = promisify(parseString);
 const archiveLocation = process.env.ARCHIVE_LOCATION;
 
 module.exports.downloadByCompany = async (company) => {
+	if (process.env.NODE_ENV === 'production') {
+		logger.warn('skipping downloading filing documents because NODE_ENV is production');
+		return;
+	}
+
 	// get all filings for the provided company
 	const { _id, ticker } = await Company.findOne({ _id: company }).lean();
 	const tickerPath = `${archiveLocation}/${ticker}`;
@@ -29,7 +34,6 @@ module.exports.downloadByCompany = async (company) => {
 	}
 
 	const filingObjs = await Filing.find({ company: _id }).lean();
-	let downloadResults = [];
 
 	for (let filing of filingObjs) {
 		// todo: download all documents related to the type of filing being pulled
@@ -53,17 +57,13 @@ module.exports.downloadByCompany = async (company) => {
 		}
 
 		for (let document of documents) {
-			const [downloadError, downloadedDocument] = await on(this.downloadById(document._id, filePath));
+			const [downloadError] = await on(this.downloadById(document._id, filePath));
 			if (downloadError) {
 				logger.error(downloadError);
 				continue;
 			}
-
-			downloadResults.push(downloadedDocument);
 		}
 	}
-
-	return downloadResults;
 }
 
 module.exports.downloadById = async (filingDocumentId, filePath) => {
