@@ -6,9 +6,9 @@ const { Filing, Company } = require('@postilion/models');
 
 router.get('/:id', async (req, res) => {
     const { params = {} } = req;
-    const { filing = '' } = params;
+    const { id = '' } = params;
 
-    const [filingError, filingObject] = await on(Filing.findById(filing));
+    const [filingError, filingObject] = await on(Filing.findById(id));
     if (filingError) {
         return res.status(400).send({
             error: `unable to find filing with id ${company}`

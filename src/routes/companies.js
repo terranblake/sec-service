@@ -8,9 +8,9 @@ const { Company } = require('@postilion/models');
 
 router.get('/:id', async (req, res) => {
     const { params = {} } = req;
-    const { company = '' } = params;
+    const { id = '' } = params;
 
-    const [companyError, companyObject] = await on(Company.findById(company));
+    const [companyError, companyObject] = await on(Company.findById(id));
     if (companyError) {
         return res.status(400).send({
             error: `unable to find company with id ${company}`
