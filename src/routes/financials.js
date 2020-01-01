@@ -32,7 +32,7 @@ router.get('/:financial', async (req, res) => {
 // results into a standardized version of the financial statement
 router.get('/:financial/:ticker', async (req, res) => {
     const { financial, ticker } = req.params;
-    const { year } = req.query;
+    const { year, quarter } = req.query;
 
     if (!financials.includes(financial)) {
         return res.status(500).send({
@@ -66,7 +66,7 @@ router.get('/:financial/:ticker', async (req, res) => {
         });
     }
 
-    const result = await getByCompanyAndYear(financial, ticker, year);
+    const result = await getByCompanyAndYear(financial, ticker, year, quarter);
     return res.status(200).send(result);
 });
 

@@ -14,12 +14,12 @@ class FilingDocumentManager {
 	constructor() { }
 
 	async downloadNewFilingDocuments(job) {
-		if (process.env.NODE_ENV === 'production') {
-			logger.warn('skipping downloading filing documents because NODE_ENV is production');
+		const { _id, company, refId } = job.data;
+
+		if (!archiveLocation) {
+			logger.warn(`skipping downloading filing documents because ARCHIVE_LOCATION has not been set for filing ${_id} company ${company}`);
 			return;
 		}
-
-		const { _id, company, refId } = job.data;
 
 		const { ticker } = await Company.findOne({ _id: company }).lean();
 		await Filing.findOneAndUpdate({ _id }, { status: 'downloading' });

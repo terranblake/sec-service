@@ -5,7 +5,7 @@ const {
 
 const { getIdentifierTreeByTickerAndYear } = require('../controllers/facts');
 
-module.exports.getByCompanyAndYear = async (financial, ticker, year) => {
+module.exports.getByCompanyAndYear = async (financial, ticker, year, quarter) => {
     const financialTree = { [financial]: {} };
 
     const financialRoles = [
@@ -24,7 +24,7 @@ module.exports.getByCompanyAndYear = async (financial, ticker, year) => {
         logger.info(`building tree for role ${role}`);
 
         // todo: finish building the tree in an api-safe format
-        const roleTree = await getIdentifierTreeByTickerAndYear(ticker, role, year);
+        const roleTree = await getIdentifierTreeByTickerAndYear(ticker, role, year, quarter);
         financialTree[role] = roleTree;
     }
 
