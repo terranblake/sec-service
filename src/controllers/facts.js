@@ -25,7 +25,7 @@ module.exports.parseFromFiling = async (filingId) => {
 }
 
 // todo: pre-compute yearly identifier trees and store them in redis for quick lookup
-module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year = moment().year()) => {
+module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year = moment().year(), quarter) => {
 	const company = await Company.findOne({ ticker }).lean();
 	if (!company) {
 		return {};
@@ -56,6 +56,8 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 			name: current.name,
 			company: company._id,
 			'date.year': year,
+			'date.type': quarter ? 'quarter' : 'year',
+			'date.quarter': quarter || '1'
 		}).lean();
 
 		if (!depths.includes(current.depth)) {
@@ -63,7 +65,7 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 		}
 
 		const children = await Identifier.find({
-			'role.name': current.role.name,
+			// 'role.name': current.role.name,
 			depth: current.depth + 1,
 			parent: current.name,
 			version: year
@@ -87,20 +89,16 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 
 	const depthEdges = {};
 	for (let depth of depths) {
-		if (depth === 6) {
-			logger.info(depth);
-		}
-
 		depthEdges[depth] = graph.outEdges(depth).map(e => e.w);
 	}
 
 	do {
 		const edge = toSearch.shift();
 		const node = graph.node(edge.w);
-		if (node) {
+		// if (node) {
 			const depth = Object.keys(depthEdges).find(d => depthEdges[d].includes(edge.w));
 			logger.info(`${depth} ${'\t'.repeat(depth)} ${edge.w} ${node && node.value || ''}`);
-		}
+		// }
 
 		edges = graph.outEdges(edge.w);
 		toSearch.unshift(...edges);
