@@ -57,7 +57,9 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 			company: company._id,
 			'date.year': year,
 			'date.type': quarter ? 'quarter' : 'year',
-			'date.quarter': quarter || '1'
+			// only filter by quarter if the quarter is actually passed in
+			// since year data isn't strict about the quarter that it starts in
+			...quarter && { 'date.quarter': quarter } || undefined
 		}).lean();
 
 		if (!depths.includes(current.depth)) {
