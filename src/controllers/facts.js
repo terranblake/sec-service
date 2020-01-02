@@ -59,6 +59,7 @@ const appendageNames = Object.keys(appendages);
 module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year = moment().year(), quarter) => {
 	const company = await Company.findOne({ ticker }).lean();
 	if (!company) {
+		logger.error(`unable to find company with ticker ${ticker}. please try again`);
 		return {};
 	}
 
@@ -72,6 +73,7 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 
 	const rootIdentifiers = await Identifier.find(rootQuery).lean();
 	if (!rootIdentifiers.length) {
+		logger.error(`unable to find root identifiers using the query ${JSON.stringify(rootQuery)}. please try again`);
 		return {};
 	}
 
