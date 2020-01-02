@@ -8,7 +8,7 @@ const { redis } = require('@postilion/stores');
 
 const { getByCompanyAndYear } = require('../controllers/financials');
 
-const { roleByFinancial } = require('@postilion/utils');
+const { logger, roleByFinancial } = require('@postilion/utils');
 const financials = keys(roleByFinancial);
 
 const requestCacheKeyBase = 'postilion:cache:route:financials';
