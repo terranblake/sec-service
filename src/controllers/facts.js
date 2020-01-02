@@ -31,6 +31,8 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 		return {};
 	}
 
+	// query with the role or group name, the
+	// year and the very top level identifiers
 	const rootQuery = {
 		'role.name': roleName,
 		depth: 0,
@@ -42,6 +44,9 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 		return {};
 	}
 
+	// create a copy of the identifiers so we can pop
+	// the entire array without destroying it because
+	// we need it later on duh
 	const searchable = Object.assign([], rootIdentifiers);
 	const graph = new Graph();
 	const depths = [];
@@ -50,8 +55,12 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 		const current = searchable.pop();
 
 		// set edge from depth to identifier name
+		// to maintain easy access to the entire tree
+		// with as little complexity
 		graph.setEdge(current.depth, current.name);
 
+		// find a fact with current.name and is
+		// the correct date format requested
 		const foundFact = await Fact.findOne({
 			name: current.name,
 			company: company._id,
@@ -62,6 +71,8 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 			...quarter && { 'date.quarter': quarter } || undefined
 		}).lean();
 
+		// keep track of the depth nodes so we have
+		// an index into each depth for later
 		if (!depths.includes(current.depth)) {
 			depths.push(current.depth);
 		}
@@ -81,6 +92,9 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 		}
 	} while (searchable.length);
 
+	// create edge between all root identifiers
+	// and a single named node. quick access to all
+	// related members and structured af
 	for (let identifier of rootIdentifiers) {
 		graph.setNode(identifier.name, identifier);
 		graph.setEdge('root', identifier.name);
