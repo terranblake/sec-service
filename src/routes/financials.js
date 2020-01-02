@@ -4,11 +4,14 @@ const express = require('express')
 const router = express.Router({ mergeParams: true });
 
 const { Filing, Company } = require('@postilion/models');
+const { redis } = require('@postilion/stores');
 
 const { getByCompanyAndYear } = require('../controllers/financials');
 
 const { roleByFinancial } = require('@postilion/utils');
 const financials = keys(roleByFinancial);
+
+const requestCacheKeyBase = 'postilion:cache:route:financials';
 
 // get all supported financials (available keys)
 router.get('/', async (_req, res) => res.json(keys(roleByFinancial)));
@@ -70,7 +73,19 @@ router.get('/:financial/:ticker', async (req, res) => {
         });
     }
 
-    const result = await getByCompanyAndYear(financial, ticker, year, quarter);
+    const cacheKey = `${requestCacheKeyBase}:${ticker}:${financial}:${year}:${quarter}`;
+
+    let result;
+    const cacheHit = await redis.get(cacheKey);
+    if (cacheHit) {
+        logger.info(`cache hit for key ${cacheKey}`);
+        result = JSON.parse(cacheHit);
+    } else {
+        logger.info(`cache miss for key ${cacheKey}`);
+        result = await getByCompanyAndYear(financial, ticker, year, quarter);
+        await redis.set(cacheKey, JSON.stringify(result));
+    }
+
     return res.status(200).send(result);
 });
 
