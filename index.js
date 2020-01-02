@@ -1,3 +1,3 @@
-require('@postilion/storage').open(['mongodb']);
+require('@postilion/stores');
 require('./src/service');
 require('./src/rest');

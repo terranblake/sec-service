@@ -24,6 +24,37 @@ module.exports.parseFromFiling = async (filingId) => {
 	return factIds;
 }
 
+// an object which defines identifiers from
+// a specific role grouping that have more
+// children synthetically appended to them
+// to improve the context for a generic role
+const appendages = {
+	// identifier to link from
+	IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments: {
+		// original identifier
+		from: {
+			identifier: {
+				'role.name': 'StatementOfIncome',
+				'role.type': 'statement',
+				'role.id': '124000',
+				version: '2017'
+			},
+		},
+		// target identifier
+		to: {
+			identifier: {
+				name: 'InterestIncomeExpenseAfterProvisionForLoanLoss',
+				'role.name': "StatementOfIncomeFirstAlternative",
+				'role.type': "statement",
+				'role.id': "124003",
+				version: '2017',
+			}
+		}
+	},
+}
+
+const appendageNames = Object.keys(appendages);
+
 // todo: pre-compute yearly identifier trees and store them in redis for quick lookup
 module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year = moment().year(), quarter) => {
 	const company = await Company.findOne({ ticker }).lean();
@@ -77,15 +108,41 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 			depths.push(current.depth);
 		}
 
+		let roleNames = [current.role.name];
+		let roleDepths = [current.depth + 1];
+		let parentIdentifiers = [current.name];
+
+		if (appendageNames.includes(current.name)) {
+			const appendage = appendages[current.name];
+
+			// get the from identifier to make sure that this identifier actually exists
+			const fromIdentifier = await Identifier.findOne({ ...appendage.from.identifier, name: current.name });
+			if (!fromIdentifier) {
+				logger.error(`unable to find appendage.from.identifier with name ${current.name}`);
+				return {};
+			}
+
+			// get the to identifier to make sure we link to something real
+			const toIdentifier = await Identifier.findOne(appendage.to.identifier);
+			if (!toIdentifier) {
+				logger.error(`unable to find appendage.to.identifier with name ${appendage.to.identifier.name}`);
+				return {};
+			}
+
+			roleNames.push(toIdentifier.role.name);
+			roleDepths.push(toIdentifier.depth);
+			parentIdentifiers.push(toIdentifier.parent);
+		}
+
 		const children = await Identifier.find({
-			// 'role.name': current.role.name,
-			depth: current.depth + 1,
+			'role.name': { $in: roleNames },
+			depth: { $in: roleDepths },
 			version: year,
-			parent: current.name,
+			parent: { $in: parentIdentifiers },
 		}).lean();
 
 		graph.setNode(current.name, foundFact);
-		
+
 		for (let child of children) {
 			graph.setEdge(current.name, child.name);
 			searchable.push(child);
