@@ -51,6 +51,10 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 
 		// set edge from depth to identifier name
 		graph.setEdge(current.depth, current.name);
+
+		if (current.name === 'NetIncomeLoss') {
+			console.log('test');
+		}
 		
 		const foundFact = await Fact.findOne({
 			name: current.name,
@@ -60,7 +64,7 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 			// only filter by quarter if the quarter is actually passed in
 			// since year data isn't strict about the quarter that it starts in
 			...quarter && { 'date.quarter': quarter } || undefined
-		}).populate('link').lean();
+		}).lean();
 
 		if (!depths.includes(current.depth)) {
 			depths.push(current.depth);
@@ -97,10 +101,10 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 	do {
 		const edge = toSearch.shift();
 		const node = graph.node(edge.w);
-		// if (node) {
+		if (node) {
 			const depth = Object.keys(depthEdges).find(d => depthEdges[d].includes(edge.w));
 			logger.info(`${depth} ${'\t'.repeat(depth)} ${edge.w} ${node && node.value || ''}`);
-		// }
+		}
 
 		edges = graph.outEdges(edge.w);
 		toSearch.unshift(...edges);
