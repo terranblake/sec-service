@@ -34,7 +34,11 @@ router.get('/:financial/:ticker', async (req, res) => {
     const { financial, ticker } = req.params;
     const { year, quarter } = req.query;
 
-    if (!financials.includes(financial)) {
+    // fixme: disabling all statement that aren't income statement
+    // while i work on refining the strategy for building each statement
+    // and the process for selecting values
+    // if (!financials.includes(financial)) {
+    if (!['income-statement'].includes(financial)) {
         return res.status(500).send({
             err: `unsupported financial`,
             message: financials

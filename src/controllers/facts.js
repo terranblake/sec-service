@@ -112,6 +112,9 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 		let roleDepths = [current.depth + 1];
 		let parentIdentifiers = [current.name];
 
+		// check if we've defined a synthetic link between
+		// identifiers, typically across roles, coming from
+		// this identifier
 		if (appendageNames.includes(current.name)) {
 			const appendage = appendages[current.name];
 
@@ -129,11 +132,15 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 				return {};
 			}
 
+			// include the linked identifier in the query
+			// for children so we get everything we need
 			roleNames.push(toIdentifier.role.name);
 			roleDepths.push(toIdentifier.depth);
 			parentIdentifiers.push(toIdentifier.parent);
 		}
 
+		// get all children of the current identifier
+		// or is a child of the identifier linked into the tree
 		const children = await Identifier.find({
 			'role.name': { $in: roleNames },
 			depth: { $in: roleDepths },
@@ -160,6 +167,8 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 	let edges = graph.outEdges('root');
 	let toSearch = edges;
 
+	let financialValues = {};
+
 	const depthEdges = {};
 	for (let depth of depths) {
 		depthEdges[depth] = graph.outEdges(depth).map(e => e.w);
@@ -173,7 +182,8 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 		if (node) {
 			const depth = Object.keys(depthEdges).find(d => depthEdges[d].includes(edge.w));
 
-			logger.info(`${depth} ${'\t'.repeat(depth)} ${edge.w} ${node && node.value || ''}`);
+			logger.info(`${depth} ${'\t'.repeat(depth)} ${edge.w} ${node.value || ''}`);
+			financialValues[edge.w] = node.value;
 
 			// flattened
 			// logger.info(`${edge.w} ${node && node.value || ''}`);
@@ -185,5 +195,5 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 
 	} while (toSearch.length);
 
-	return graph;
+	return financialValues;
 }
