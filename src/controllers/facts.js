@@ -52,10 +52,6 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 		// set edge from depth to identifier name
 		graph.setEdge(current.depth, current.name);
 
-		if (current.name === 'NetIncomeLoss') {
-			console.log('test');
-		}
-		
 		const foundFact = await Fact.findOne({
 			name: current.name,
 			company: company._id,
@@ -73,8 +69,8 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 		const children = await Identifier.find({
 			// 'role.name': current.role.name,
 			depth: current.depth + 1,
+			version: year,
 			parent: current.name,
-			version: year
 		}).lean();
 
 		graph.setNode(current.name, foundFact);
@@ -101,9 +97,15 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 	do {
 		const edge = toSearch.shift();
 		const node = graph.node(edge.w);
+
+		// comment out to print all nodes
 		if (node) {
 			const depth = Object.keys(depthEdges).find(d => depthEdges[d].includes(edge.w));
+
 			logger.info(`${depth} ${'\t'.repeat(depth)} ${edge.w} ${node && node.value || ''}`);
+
+			// flattened
+			// logger.info(`${edge.w} ${node && node.value || ''}`);
 		}
 
 		edges = graph.outEdges(edge.w);
