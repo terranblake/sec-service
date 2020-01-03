@@ -82,6 +82,7 @@ router.get('/:financial/:ticker', async (req, res) => {
         result = JSON.parse(cacheHit);
     } else {
         logger.info(`cache miss for key ${cacheKey}`);
+        await redis.set(cacheKey, JSON.stringify({ message: 'please check back soon' }), 'EX', 60);
         result = await getByCompanyAndYear(financial, ticker, year, quarter);
 
         if (result && Object.keys(result).length){
