@@ -184,11 +184,14 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 		if (node) {
 			const depth = Object.keys(depthEdges).find(d => depthEdges[d].includes(edge.w));
 
-			logger.info(`${depth} ${'\t'.repeat(depth)} ${edge.w} ${node.value || ''}`);
-			financialValues[edge.w] = node.value;
+			if (process.env.NODE_ENV !== 'production') {
+				logger.info(`${depth} ${'\t'.repeat(depth)} ${edge.w} ${node.value || ''}`);
+			} else {
+				// flattened
+				logger.info(`${edge.w} ${node && node.value || ''}`);
+			}
 
-			// flattened
-			// logger.info(`${edge.w} ${node && node.value || ''}`);
+			financialValues[edge.w] = node.value;
 		}
 
 		edges = graph.outEdges(edge.w);
