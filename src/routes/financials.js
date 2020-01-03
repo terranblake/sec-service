@@ -85,7 +85,8 @@ router.get('/:financial/:ticker', async (req, res) => {
         result = await getByCompanyAndYear(financial, ticker, year, quarter);
 
         if (result && Object.keys(result).length){
-            await redis.set(cacheKey, JSON.stringify(result));
+            // expire key after 5 minutes
+            await redis.set(cacheKey, JSON.stringify(result), 'EX', 300);
         }
     }
 
