@@ -30,8 +30,8 @@
   "license": "ISC",
   "dependencies": {
     "@dagrejs/graphlib": "^2.1.4",
-    "@postilion/pubsub": "github:terranblake/pubsub#master",
     "@postilion/models": "github:terranblake/models#master",
+    "@postilion/pubsub": "github:terranblake/pubsub#master",
     "@postilion/stores": "github:terranblake/stores#master",
     "@postilion/utils": "github:terranblake/utils#master",
     "await-on": "^0.1.4",
@@ -45,6 +45,7 @@
     "parse5": "^5.1.0",
     "request": "^2.88.0",
     "rss-parser": "^3.7.0",
+    "shortid": "^2.2.15",
     "xml2js": "^0.4.19",
     "xmldom": "^0.1.27",
     "xmlserializer": "^0.6.1",
