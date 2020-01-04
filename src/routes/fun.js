@@ -16,8 +16,22 @@ router.get('/', async (req, res) => {
 
         console.log(`creating id ${id} for url ${query.url}`);
         await redis.set(id, query.url, 'EX', week);
+        const url = process.env.REDIRECT_URL + `/${id}`;
 
-        return res.redirect(301, process.env.REDIRECT_URL + `/${id}`);
+        return res.status(200).send(`
+            <!doctype html>
+            <html lang="en">
+                <head>
+                    <meta charset="utf-8">
+                    <title>🍑</title>
+                    <link rel="stylesheet" href="css/styles.css?v=1.0">
+                </head>
+                </head>
+                    <body>
+                        <p>${url}</p>
+                    </body>
+            </html>
+        `);
     }
 
     return res.status(200).send({ err: '🍆' });
