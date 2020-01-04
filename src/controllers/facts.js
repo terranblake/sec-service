@@ -101,8 +101,8 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 			'date.type': quarter ? 'quarter' : 'year',
 			// only filter by quarter if the quarter is actually passed in
 			// since year data isn't strict about the quarter that it starts in
-			...quarter && { 'date.quarter': quarter } || undefined
-		}).lean();
+			...quarter && { 'date.quarter': quarter } || undefined,
+		}).sort({ 'segment': 1 }).lean();
 
 		// keep track of the depth nodes so we have
 		// an index into each depth for later

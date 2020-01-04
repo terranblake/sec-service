@@ -7,9 +7,7 @@ const shortid = require('shortid');
 const week = 60 * 60 * 24;
 
 router.get('/', async (req, res) => {
-    const {
-        query = {},
-    } = req;
+    const { query = {} } = req;
 
     if (query.url) {
         const id = shortid.generate();
@@ -26,7 +24,6 @@ router.get('/', async (req, res) => {
                     <title>🍑</title>
                     <link rel="stylesheet" href="css/styles.css?v=1.0">
                 </head>
-                </head>
                     <body>
                         <p>${url}</p>
                     </body>
@@ -38,9 +35,7 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/:id', async (req, res) => {
-    const {
-        params = {}
-    } = req;
+    const { params = {} } = req;
 
     if (params.id) {
         const url = await redis.get(params.id);
