@@ -1,28 +1,8 @@
 const { Graph } = require("@dagrejs/graphlib");
 const moment = require('moment');
 
-const { Company, Fact, Identifier, FilingDocument } = require('@postilion/models');
-
-const { crawlById: crawlFilingDocumentById } = require('./filing-documents');
-const filingDocumentParsers = require('../utils/filing-document-parsers');
-
+const { Company, Fact, Identifier } = require('@postilion/models');
 const { logger } = require('@postilion/utils');
-
-module.exports.parseFromFiling = async (filingId) => {
-	const documents = await FilingDocument
-		.find({
-			filing: filingId,
-			type: { $in: Object.keys(filingDocumentParsers) }
-		})
-		.lean();
-
-	logger.info(`found ${documents.length} filingDocuments to crawl for facts`);
-	for (let document of documents) {
-		await crawlFilingDocumentById(document._id);
-	}
-
-	return factIds;
-}
 
 // an object which defines identifiers from
 // a specific role grouping that have more
@@ -50,8 +30,8 @@ const appendages = {
 				version: '2017',
 			}
 		}
-	},
-}
+	}
+};
 
 const appendageNames = Object.keys(appendages);
 
@@ -83,6 +63,7 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 	const searchable = Object.assign([], rootIdentifiers);
 	const graph = new Graph();
 	const depths = [];
+	let currentDepth;
 
 	do {
 		const current = searchable.pop();
@@ -90,11 +71,12 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 		// set edge from depth to identifier name
 		// to maintain easy access to the entire tree
 		// with as little complexity
-		graph.setEdge(current.depth, current.name);
+		currentDepth = current.depth || currentDepth;
+		graph.setEdge(currentDepth, current.name);
 
 		// find a fact with current.name and is
 		// the correct date format requested
-		const foundFact = await Fact.findOne({
+		let factQuery = {
 			name: current.name,
 			company: company._id,
 			'date.year': year,
@@ -102,7 +84,31 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 			// only filter by quarter if the quarter is actually passed in
 			// since year data isn't strict about the quarter that it starts in
 			...quarter && { 'date.quarter': quarter } || undefined,
-		}).sort({ 'segment': 1 }).lean();
+		};
+
+		let foundFact = await Fact.findOne(factQuery).sort({ 'segment': 1 }).lean();
+
+		if (!foundFact) {
+			// todo: search the definition linkbase for identifiers which are linked
+			// from the current identifier to any other identifier. extract identifier
+			// data from them to put in the children nodes query below
+			const definitionArc = await Link.findOne({
+				filing,
+				company,
+				type: 'arc',
+				documentType: 'definition',
+				// todo: add to/from filters
+				'from.prefix': current.prefix,
+				'from.name': current.name
+			});
+
+			factQuery.name = definitionArc.name;
+			foundFact = await Fact.findOne(factQuery).sort({ 'segment': 1 }).lean();
+
+			// override the name of the fact to the identifier that
+			// we originally expected to keep the integrity of the tree
+			foundFact.name = current.name;
+		}
 
 		// keep track of the depth nodes so we have
 		// an index into each depth for later
@@ -113,6 +119,12 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 		let roleNames = [current.role.name];
 		let roleDepths = [current.depth + 1];
 		let parentIdentifiers = [current.name];
+
+		// if no fact is found, maybe we should check if there are
+		// links which would point us to a fact with the correct name 🤔
+
+		// check if an arc of the same documentType exists
+		// and include the result locators from field
 
 		// check if we've defined a synthetic link between
 		// identifiers, typically across roles, coming from
@@ -145,14 +157,41 @@ module.exports.getIdentifierTreeByTickerAndYear = async (ticker, roleName, year 
 		// or is a child of the identifier linked into the tree
 		const children = await Identifier.find({
 			'role.name': { $in: roleNames },
-			depth: { $in: roleDepths },
+			// temp: disabling this while testing
+			// calc/def links between identifiers
+			// depth: { $in: roleDepths },
 			version: year,
 			parent: { $in: parentIdentifiers },
 		}).lean();
 
 		graph.setNode(current.name, foundFact);
 
-		for (let child of children) {
+		// get all links from the current identifier
+		// to another identifier which modifies the
+		// original calculation linkbase 
+		const calculationArcs = await Link.find({
+			filing,
+			company,
+			type: 'arc',
+			documentType: 'calculation',
+			// we only want arcs from the current identifier
+			// to the potentially unknown identifier name
+			'from.prefix': current.prefix,
+			'from.name': current.name,
+			// dont include a to parameter because we want
+			// all calculation arcs that were created for linking
+		}).map(l => {
+			// map the current identifier onto the calculation arcs
+			// to absorb any differences and normalize the next iteration
+			// through the graph process
+			return {
+				name: l.name,
+				depth: current.depth + 1,
+				...current
+			}
+		});
+
+		for (let child of [...children, ...calculationArcs]) {
 			graph.setEdge(current.name, child.name);
 			searchable.push(child);
 		}
