@@ -37,7 +37,7 @@
     "await-on": "^0.1.4",
     "body-parser": "^1.19.0",
     "cron": "^1.7.1",
-    "express": "^4.16.4",
+    "express": "^4.17.3",
     "lodash": "^4.17.15",
     "moment": "^2.24.0",
     "moment-range": "^4.0.2",
